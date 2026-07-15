@@ -1,13 +1,276 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+model Admin {
+  id       String    @id @default(cuid())
+  name     String
+  email    String    @unique
+  password String
+  role     AdminRole @default(ADMIN)
+  isActive Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id           String  @id @default(cuid())
+  name         String
+  email        String? @unique
+  mobile       String? @unique
+  password     String
+  profileImage String?
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  image       String?
+  description String?
+  icon        String?
+  deletedAt   DateTime?
+
+  parentId String?
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+
+  products Product[]
+
+  displayOrder Int     @default(0)
+  isFeatured   Boolean @default(false)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  OUT_OF_STOCK
+  ARCHIVED
+}
+
+model Brand {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  logo        String?
+  isActive    Boolean   @default(true)
+  description String?
+  deletedAt   DateTime?
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Color {
+  id       String  @id @default(cuid())
+  name     String
+  hexCode  String
+  isActive Boolean @default(true)
+
+  variants ProductVariant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Size {
+  id           String  @id @default(cuid())
+  name         String
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+
+  variants ProductVariant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Collection {
+  id           String    @id @default(cuid())
+  name         String
+  slug         String    @unique
+  image        String?
+  displayOrder Int       @default(0)
+  isActive     Boolean   @default(true)
+  description  String?
+  deletedAt    DateTime?
+
+  products ProductCollection[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id String @id @default(cuid())
+
+  name String
+  slug String @unique
+
+  description      String  @db.Text
+  shortDescription String?
+
+  sku String @unique
+
+  deletedAt DateTime?
+
+  price        Decimal  @db.Decimal(10, 2)
+  discount     Decimal? @db.Decimal(10, 2)
+  sellingPrice Decimal  @db.Decimal(10, 2)
+
+  weight        Decimal? @db.Decimal(10, 2)
+  isReturnable  Boolean  @default(true)
+  isFeatured    Boolean  @default(false)
+  averageRating Decimal? @db.Decimal(2, 1)
+  reviewCount   Int      @default(0)
+
+  material String?
+
+  status ProductStatus @default(DRAFT)
+
+  isActive Boolean @default(true)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  brandId String?
+  brand   Brand?  @relation(fields: [brandId], references: [id])
+
+  images      ProductImage[]
+  videos      ProductVideo[]
+  variants    ProductVariant[]
+  collections ProductCollection[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([status])
+}
+
+model ProductImage {
+  id String @id @default(cuid())
+
+  imageUrl String
+  altText  String?
+
+  displayOrder Int @default(0)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+model ProductVideo {
+  id String @id @default(cuid())
+
+  videoUrl String
+  duration Int?
+
+  thumbnailUrl String?
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+model ProductVariant {
+  id String @id @default(cuid())
+
+  sku String @unique
+
+  stock Int @default(0)
+
+  barcode String?
+
+  price Decimal? @db.Decimal(10, 2)
+
+  isActive Boolean @default(true)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  colorId String?
+  color   Color?  @relation(fields: [colorId], references: [id])
+
+  sizeId String?
+  size   Size?   @relation(fields: [sizeId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([colorId])
+  @@index([sizeId])
+}
+
+model ProductCollection {
+  id String @id @default(cuid())
+
+  productId    String
+  collectionId String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([productId, collectionId])
+  @@index([productId])
+  @@index([collectionId])
+}
+
+model Banner {
+  id String @id @default(cuid())
+
+  title String
+
+  description String?
+
+  subtitle String?
+
+  imageUrl String
+
+  buttonText String?
+
+  redirectUrl String?
+
+  displayOrder Int @default(0)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
 }
