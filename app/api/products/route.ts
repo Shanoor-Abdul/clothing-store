@@ -1,60 +1,60 @@
 import { NextRequest } from "next/server";
 
 import { ApiResponse } from "@/lib/api-response";
-import { ProductService } from "@/features/products/services/product.service";
-import { ProductSchema } from "@/features/products/validation/product.schema";
+import prisma from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const products = await ProductService.getAll();
+    const { searchParams } = new URL(request.url);
 
-    return ApiResponse.success(
-      products,
-      "Products fetched successfully"
-    );
-  } catch (error) {
-    console.error(error);
+    const category = searchParams.get("category");
+    const search = searchParams.get("search");
+    const featured = searchParams.get("featured");
 
-    return ApiResponse.error(
-      "Failed to fetch products"
-    );
-  }
-}
+    const where: Record<string, unknown> = {
+      isActive: true,
+      status: "PUBLISHED",
+    };
 
-export async function POST(
-  request: NextRequest
-) {
-  try {
-    const body = await request.json();
-
-    const validation =
-      ProductSchema.safeParse(body);
-
-    if (!validation.success) {
-      return ApiResponse.error(
-        "Validation failed",
-        400,
-        validation.error.flatten()
-      );
+    if (category) {
+      where.categoryId = category;
     }
 
-    const product =
-      await ProductService.create(
-        validation.data
-      );
+    if (featured === "true") {
+      where.isFeatured = true;
+    }
 
-    return ApiResponse.success(
-      product,
-      "Product created successfully",
-      201
-    );
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        {
+          description: { contains: search, mode: "insensitive" },
+        },
+        {
+          shortDescription: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+      ];
+    }
+
+    const products = await prisma.product.findMany({
+      where,
+      include: {
+        category: true,
+        brand: true,
+        images: {
+          orderBy: { displayOrder: "asc" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return ApiResponse.success(products, "Products fetched");
   } catch (error) {
     console.error(error);
 
-    return ApiResponse.error(
-      error instanceof Error
-        ? error.message
-        : "Failed to create product"
-    );
+    return ApiResponse.error("Failed to fetch products", 500);
   }
 }

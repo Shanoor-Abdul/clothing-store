@@ -1,12 +1,10 @@
 import { ProductFormData } from "./validation/product.schema";
-import { Product } from "./types/product";
 
 export const mapProductToForm = (
-  product: Product
+  product: any
 ): ProductFormData => ({
   name: product.name,
   slug: product.slug,
-  logo: product.logo ?? "",
   description: product.description ?? "",
   status: product.status,
   sku: product.sku,

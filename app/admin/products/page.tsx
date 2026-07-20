@@ -10,6 +10,7 @@ import { PRODUCT_DEFAULT_VALUES } from "@/features/products/constants/product";
 import ProductTable from "@/features/products/components/ProductTable";
 import DeleteProductModal from "@/features/products/components/DeleteProductModal";
 import { useBrands } from "@/features/brand/hooks/useBrands";
+import { mapProductToForm } from "@/features/products/mapper";
 // import { useCollections } from '@/features/collection/hooks/useCollections';
 
 const ProductsPage = () => {
@@ -89,8 +90,9 @@ const ProductsPage = () => {
       <ProductForm
         onSubmit={handleSubmit}
         defaultValues={
-          editingProduct ??
-          PRODUCT_DEFAULT_VALUES
+          editingProduct
+            ? mapProductToForm(editingProduct)
+            : PRODUCT_DEFAULT_VALUES
         }
         loading={
           createMutation.isPending ||
@@ -98,7 +100,7 @@ const ProductsPage = () => {
         }
         categories={categories}
         brands={brands}
-        // collections={collections}
+        collections={[]}
       />
 
       {isLoading ? (
