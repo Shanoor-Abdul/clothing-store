@@ -1,10 +1,13 @@
+import { NextRequest } from "next/server";
+
 import { ApiResponse } from "@/lib/api-response";
 
+import { ProductSchema } from "@/features/products/validation/product.schema";
 import { ProductService } from "@/features/products/services";
 
 export async function GET() {
   try {
-    const products = await ProductService.getPublishedProducts();
+    const products = await ProductService.getAll();
 
     return ApiResponse.success(
       products,
@@ -16,5 +19,42 @@ export async function GET() {
     return ApiResponse.error(
       "Failed to fetch products"
     );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    const validation = ProductSchema.safeParse(body);
+
+    if (!validation.success) {
+      return ApiResponse.error(
+        "Validation failed",
+        400,
+        validation.error.flatten()
+      );
+    }
+
+    const product = await ProductService.create(
+      validation.data
+    );
+
+    return ApiResponse.success(
+      product,
+      "Product created successfully",
+      201
+    );
+  } catch (error) {
+    console.error(error);
+
+    if (
+      error instanceof Error &&
+      error.message === "Product already exists."
+    ) {
+      return ApiResponse.error(error.message, 409);
+    }
+
+    return ApiResponse.error("Failed to create product");
   }
 }
