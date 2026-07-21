@@ -42,7 +42,7 @@ const LoginPage = () => {
     try {
       await loginMutation.mutateAsync(data);
       toast.success("Login successful");
-      router.replace("/account");
+      router.replace("/products");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Login failed"

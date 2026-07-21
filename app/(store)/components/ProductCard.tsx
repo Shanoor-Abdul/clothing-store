@@ -20,6 +20,8 @@ interface ProductCardProps {
     discount?: number | null;
     images?: { imageUrl: string }[];
     isFeatured?: boolean;
+    isActive?: boolean;
+    status?: string;
     variants?: ProductVariant[];
   };
   onAddToCart?: () => void;
@@ -32,11 +34,17 @@ const ProductCard = ({
   actionLabel = "Add",
 }: ProductCardProps) => {
   const image = product.images?.[0]?.imageUrl;
-  const stock =
+  const variantStock =
     product.variants?.reduce(
       (sum, variant) => sum + (variant.stock ?? 0),
       0
     ) ?? 0;
+  const stock =
+    variantStock > 0
+      ? variantStock
+      : product.isActive && product.status !== "OUT_OF_STOCK"
+      ? 10
+      : 0;
 
   return (
     <div className="group rounded-xl border bg-white p-3 shadow-sm transition hover:shadow-md">

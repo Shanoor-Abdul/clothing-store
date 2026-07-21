@@ -13,6 +13,10 @@ import { useCart } from "@/features/cart/hooks";
 import { useAppSelector } from "@/store";
 import { useAddToWishlist } from "@/features/wishlist/hooks";
 import ProductCard from "../../components/ProductCard";
+import {
+  Product,
+  ProductVariant,
+} from "@/features/products/types/product";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -21,9 +25,9 @@ interface ApiResponse<T> {
 }
 
 const fetchProduct = async (slug: string) => {
-  const { data } = await api.get<ApiResponse<any>>(
-    `/products/${slug}`
-  );
+  const { data } = await api.get<ApiResponse<
+    Product & { relatedProducts?: Product[] }
+  >>(`/products/${slug}`);
   return data.data;
 };
 
@@ -39,8 +43,9 @@ const ProductDetailPage = () => {
 
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState<
-    any | null
+    ProductVariant | null
   >(null);
+  const [activeImage, setActiveImage] = useState<string | null>(null);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", slug],
@@ -64,14 +69,20 @@ const ProductDetailPage = () => {
     );
   }
 
-  const image = product.images?.[0]?.imageUrl;
+  const images = product.images ?? [];
+  const image = activeImage || images[0]?.imageUrl;
   const variants = product.variants || [];
+  const totalVariantStock = variants.reduce(
+    (sum, variant) => sum + (variant.stock ?? 0),
+    0
+  );
+  const fallbackStock =
+    product.isActive && product.status !== "OUT_OF_STOCK" ? 10 : 0;
   const stock = selectedVariant
     ? selectedVariant.stock
-    : product.variants?.reduce(
-        (s: number, v: any) => s + v.stock,
-        0
-      ) || 0;
+    : totalVariantStock > 0
+    ? totalVariantStock
+    : fallbackStock;
 
   const handleAddToCart = () => {
     add({
@@ -93,120 +104,187 @@ const ProductDetailPage = () => {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="grid gap-8 md:grid-cols-2">
-        <div className="overflow-hidden rounded-xl border bg-white">
-          {image ? (
-            <Image
-              src={image}
-              alt={product.name}
-              width={500}
-              height={500}
-              className="h-[400px] w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-[400px] items-center justify-center text-slate-400">
-              No Image
-            </div>
-          )}
-
-          {product.images?.length > 1 && (
-            <div className="flex gap-2 p-3">
-              {product.images.map((img: any) => (
-                <img
-                  key={img.id}
-                  src={img.imageUrl}
-                  alt={img.altText || product.name}
-                  className="h-20 w-20 rounded border object-cover"
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <h1 className="text-3xl font-bold">{product.name}</h1>
-          {product.brand && (
-            <p className="mt-1 text-slate-500">
-              {product.brand.name}
-            </p>
-          )}
-
-          <div className="mt-4 flex items-center gap-3">
-            <span className="text-2xl font-bold text-slate-900">
-              {formatCurrency(Number(product.sellingPrice))}
-            </span>
-            {Number(product.discount) > 0 && (
-              <span className="text-lg text-slate-400 line-through">
-                {formatCurrency(Number(product.price))}
-              </span>
+      <div className="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="space-y-6">
+          <div className="overflow-hidden rounded-3xl border bg-white shadow-sm">
+            {image ? (
+              <Image
+                src={image}
+                alt={product.name}
+                width={700}
+                height={700}
+                className="h-[500px] w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-[500px] items-center justify-center text-slate-400">
+                No Image
+              </div>
             )}
           </div>
 
-          {product.shortDescription && (
-            <p className="mt-4 text-slate-600">
-              {product.shortDescription}
-            </p>
-          )}
-
-          {variants.length > 0 && (
-            <div className="mt-6">
-              <h3 className="mb-2 text-sm font-medium">
-                Select Variant
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {variants.map((v: any) => (
-                  <button
-                    key={v.id}
-                    onClick={() => setSelectedVariant(v)}
-                    disabled={v.stock === 0}
-                    className={`rounded-lg border px-3 py-2 text-sm ${
-                      selectedVariant?.id === v.id
-                        ? "border-blue-600 bg-blue-50"
-                        : "hover:border-blue-400"
-                    } ${v.stock === 0 ? "opacity-40" : ""}`}
-                  >
-                    {v.color?.name}
-                    {v.size?.name ? ` / ${v.size.name}` : ""}
-                  </button>
-                ))}
-              </div>
+          {images.length > 1 && (
+            <div className="flex flex-wrap items-center gap-3">
+              {images.map((img) => (
+                <button
+                  key={img.id}
+                  type="button"
+                  onClick={() => setActiveImage(img.imageUrl)}
+                  className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition ${
+                    image === img.imageUrl ? "border-blue-500" : "border-transparent"
+                  }`}
+                >
+                  <Image
+                    src={img.imageUrl}
+                    alt={img.altText || product.name}
+                    width={100}
+                    height={100}
+                    className="h-24 w-24 object-cover"
+                  />
+                </button>
+              ))}
             </div>
           )}
 
-          <div className="mt-6 flex items-center gap-4">
-            <div className="flex items-center rounded-lg border">
+          <div className="rounded-3xl border bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm uppercase tracking-[0.24em] text-slate-500">
+                  {product.category?.name || "Uncategorized"}
+                </p>
+                <h1 className="mt-2 text-4xl font-semibold text-slate-900">
+                  {product.name}
+                </h1>
+              </div>
+              <div className="rounded-3xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-800">
+                {product.status === "PUBLISHED" ? "In stock" : "Unavailable"}
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-4">
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-bold text-slate-900">
+                  {formatCurrency(Number(product.sellingPrice))}
+                </span>
+                {Number(product.discount) > 0 && (
+                  <span className="text-base text-slate-400 line-through">
+                    {formatCurrency(Number(product.price))}
+                  </span>
+                )}
+              </div>
+
+              <div className="rounded-full bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
+                {product.isFeatured ? "Featured" : "Best seller"}
+              </div>
+            </div>
+
+            {product.shortDescription && (
+              <p className="mt-4 text-slate-600">
+                {product.shortDescription}
+              </p>
+            )}
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-3xl border bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-600">Brand</p>
+                <p className="mt-2 text-base text-slate-900">
+                  {product.brand?.name || "Unknown"}
+                </p>
+              </div>
+              <div className="rounded-3xl border bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-600">SKU</p>
+                <p className="mt-2 text-base text-slate-900">{product.sku}</p>
+              </div>
+              <div className="rounded-3xl border bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-600">Material</p>
+                <p className="mt-2 text-base text-slate-900">
+                  {product.material || "Not specified"}
+                </p>
+              </div>
+              <div className="rounded-3xl border bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-600">Weight</p>
+                <p className="mt-2 text-base text-slate-900">
+                  {product.weight ? `${product.weight} g` : "N/A"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="rounded-3xl border bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">Buy Now</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Choose quantity and add this product to your cart.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+                Available: {stock || 0}
+              </div>
+            </div>
+
+            {variants.length > 0 && (
+              <div className="mt-6">
+                <h3 className="mb-3 text-sm font-medium text-slate-700">
+                  Select Variant
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {variants.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setSelectedVariant(v)}
+                      disabled={v.stock === 0}
+                      className={`rounded-2xl border px-4 py-2 text-sm transition ${
+                        selectedVariant?.id === v.id
+                          ? "border-blue-600 bg-blue-50 text-blue-700"
+                          : "border-slate-200 text-slate-700 hover:border-slate-400"
+                      } ${v.stock === 0 ? "opacity-40" : ""}`}
+                    >
+                      {v.color?.name || "Variant"}
+                      {v.size?.name ? ` / ${v.size.name}` : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
               <button
-                onClick={() =>
-                  setQuantity((q) => Math.max(1, q - 1))
-                }
-                className="p-2"
-                aria-label="Decrease"
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="rounded-full bg-white p-2 text-slate-700 shadow-sm hover:bg-slate-100"
+                aria-label="Decrease quantity"
               >
-                <Minus size={16} />
+                <Minus size={18} />
               </button>
-              <span className="w-10 text-center">{quantity}</span>
+              <span className="min-w-[2.5rem] text-center text-lg font-semibold text-slate-900">
+                {quantity}
+              </span>
               <button
-                onClick={() =>
-                  setQuantity((q) => Math.min(stock, q + 1))
-                }
-                className="p-2"
+                type="button"
+                onClick={() => setQuantity((q) => Math.min(stock, q + 1))}
+                className="rounded-full bg-white p-2 text-slate-700 shadow-sm hover:bg-slate-100"
                 disabled={stock === 0}
-                aria-label="Increase"
+                aria-label="Increase quantity"
               >
-                <Plus size={16} />
+                <Plus size={18} />
               </button>
             </div>
 
             <button
+              type="button"
               onClick={handleAddToCart}
               disabled={stock === 0}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <ShoppingCart size={18} />
               {stock === 0 ? "Out of Stock" : "Add to Cart"}
             </button>
 
             <button
+              type="button"
               onClick={() => {
                 if (!isAuthenticated) {
                   toast.error("Please login to save to wishlist");
@@ -217,31 +295,62 @@ const ProductDetailPage = () => {
                   onSuccess: () => toast.success("Added to wishlist"),
                 });
               }}
-              className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-3 font-medium text-slate-700 hover:bg-slate-50"
-              aria-label="Add to wishlist"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
               <Heart size={18} />
+              Add to Wishlist
             </button>
           </div>
 
+          <div className="rounded-3xl border bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-slate-900">Product Details</h3>
+            <dl className="mt-5 grid gap-4 text-sm text-slate-600 sm:grid-cols-2">
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <dt className="font-semibold text-slate-800">Category</dt>
+                <dd className="mt-1">{product.category?.name || "Uncategorized"}</dd>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <dt className="font-semibold text-slate-800">Brand</dt>
+                <dd className="mt-1">{product.brand?.name || "Unknown"}</dd>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <dt className="font-semibold text-slate-800">Status</dt>
+                <dd className="mt-1">{product.status}</dd>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <dt className="font-semibold text-slate-800">Featured</dt>
+                <dd className="mt-1">{product.isFeatured ? "Yes" : "No"}</dd>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <dt className="font-semibold text-slate-800">Reviews</dt>
+                <dd className="mt-1">{product.reviewCount} reviews</dd>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <dt className="font-semibold text-slate-800">Active</dt>
+                <dd className="mt-1">{product.isActive ? "Yes" : "No"}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <div className="xl:col-span-2">
           {product.description && (
-            <div className="mt-8 border-t pt-6">
-              <h3 className="mb-2 font-semibold">Description</h3>
-              <p className="whitespace-pre-line text-slate-600">
+            <div className="rounded-3xl border bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-semibold text-slate-900">Description</h3>
+              <p className="mt-4 whitespace-pre-line text-slate-600">
                 {product.description}
               </p>
             </div>
           )}
         </div>
 
-        {/* Related Products */}
         {product.relatedProducts && product.relatedProducts.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-xl font-bold">
-              More from {product.category.name}
+          <div className="xl:col-span-2 mt-6">
+            <h2 className="text-xl font-bold text-slate-900">
+              More from {product.category?.name || "this category"}
             </h2>
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-              {product.relatedProducts.map((related: any) => (
+              {product.relatedProducts.map((related) => (
                 <ProductCard
                   key={related.id}
                   product={related}

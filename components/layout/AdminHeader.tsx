@@ -14,10 +14,15 @@ const AdminHeader = () => {
   const logout = useLogout();
 
   const handleLogout = async () => {
-    await logout.mutateAsync();
-    dispatch(clearAuth());
-    toast.success("Logged out");
-    router.replace("/admin/login");
+    try {
+      await logout.mutateAsync();
+      dispatch(clearAuth());
+      toast.success("Logged out");
+    } catch {
+      toast.error("Unable to log out. Redirecting to login.");
+    } finally {
+      router.replace("/admin/login");
+    }
   };
 
   return (
