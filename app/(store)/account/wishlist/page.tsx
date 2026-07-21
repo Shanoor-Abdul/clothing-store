@@ -43,7 +43,7 @@ const WishlistPage = () => {
         </div>
       ) : (
         <div className="mt-6 space-y-3">
-          {items.map((item: { id: string; product: { name: string; slug: string; images?: { imageUrl: string }[]; imageUrl?: string | null } }) => {
+          {items.map((item: { id: string; product: { id: string; name: string; slug: string; sellingPrice: number | string; images?: { imageUrl: string }[]; imageUrl?: string | null } }) => {
             const product = item.product;
             const image =
               product?.images?.[0]?.imageUrl || product?.imageUrl || null;

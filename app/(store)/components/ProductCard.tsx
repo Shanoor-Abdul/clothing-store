@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { formatCurrency } from "@/utils";
+import WishlistButton from "@/components/common/WishlistButton";
 
 interface ProductVariant {
   id: string;
@@ -48,7 +49,11 @@ const ProductCard = ({
       : 0;
 
   return (
-    <div className="group rounded-xl border bg-white p-3 shadow-sm transition hover:shadow-md">
+    <div className="group relative rounded-xl border bg-white p-3 shadow-sm transition hover:shadow-md">
+      <div className="absolute right-4 top-4 z-10">
+        <WishlistButton productId={product.id} size={18} />
+      </div>
+
       <Link href={`/products/${product.slug}`} className="space-y-3">
         <div className="relative aspect-square overflow-hidden rounded-lg bg-slate-100">
           {image ? (
@@ -56,7 +61,9 @@ const ProductCard = ({
               src={image}
               alt={product.name}
               fill
-              className="object-cover transition group-hover:scale-105"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover transition duration-300 group-hover:scale-105"
+              loading="lazy"
             />
           ) : (
             <div className="flex h-full items-center justify-center text-slate-400">
@@ -87,7 +94,7 @@ const ProductCard = ({
         <button
           type="button"
           onClick={onAddToCart}
-          className="mt-4 w-full rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+          className="mt-4 w-full rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
           disabled={stock === 0}
         >
           {stock === 0 ? "Out of stock" : actionLabel}

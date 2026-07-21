@@ -1,12 +1,14 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 import api from "@/lib/axios";
 import ProductCard from "../components/ProductCard";
+import Pagination from "@/components/common/Pagination";
+import { ProductCardSkeleton } from "@/components/common/Skeleton";
 import { Category } from "@/features/category/types/category";
 import { Color } from "@/features/color/types/color";
 import { Size } from "@/features/size/types/size";
@@ -18,6 +20,8 @@ interface ApiResponse<T> {
   message: string;
   data: T;
 }
+
+const ITEMS_PER_PAGE = 12;
 
 const fetchProducts = async (url: string) => {
   const { data } = await api.get<ApiResponse<Product[]>>(url);
@@ -47,6 +51,7 @@ const fetchCollections = async () => {
 const ProductsPageInner = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [page, setPage] = useState(1);
 
   const category = searchParams.get("category");
   const search = searchParams.get("search");
@@ -70,49 +75,68 @@ const ProductsPageInner = () => {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products", "list", query.toString()],
     queryFn: () => fetchProducts(`/products?${query.toString()}`),
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories", "list"],
     queryFn: fetchCategories,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: colors = [] } = useQuery({
     queryKey: ["colors", "list"],
     queryFn: fetchColors,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: sizes = [] } = useQuery({
     queryKey: ["sizes", "list"],
     queryFn: fetchSizes,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: collections = [] } = useQuery({
     queryKey: ["collections", "list"],
     queryFn: fetchCollections,
+    staleTime: 5 * 60 * 1000,
   });
 
-  const updateFilter = (key: string, value: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (value) {
-      params.set(key, value);
-    } else {
-      params.delete(key);
-    }
-    router.push(`/products?${params.toString()}`);
-  };
+  // Reset to page 1 when filters change
+  const updateFilter = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParams);
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+      setPage(1);
+      router.push(`/products?${params.toString()}`);
+    },
+    [searchParams, router]
+  );
 
-  const clearAllFilters = () => {
+  const clearAllFilters = useCallback(() => {
+    setPage(1);
     router.push("/products");
-  };
+  }, [router]);
 
-  const hasActiveFilters = category || search || featured || color || size || collection || minPrice || maxPrice;
+  const hasActiveFilters =
+    category || search || featured || color || size || collection || minPrice || maxPrice;
 
   const title = search
     ? `Search: "${search}"`
     : featured
     ? "Featured Products"
     : "All Products";
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(products.length / ITEMS_PER_PAGE));
+  const paginatedProducts = products.slice(
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -128,17 +152,21 @@ const ProductsPageInner = () => {
             <span className="rounded-full bg-slate-100 px-3 py-2 text-slate-700">
               {products.length} products
             </span>
-            {featured && <span className="rounded-full bg-blue-50 px-3 py-2 text-blue-600">Featured only</span>}
+            {featured && (
+              <span className="rounded-full bg-blue-50 px-3 py-2 text-blue-600">
+                Featured only
+              </span>
+            )}
           </div>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[280px_1fr]">
-        <aside className="space-y-4 md:sticky md:top-6">
+        <aside className="space-y-4 md:sticky md:top-6 md:self-start">
           {hasActiveFilters && (
             <button
               onClick={clearAllFilters}
-              className="rounded-3xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="w-full rounded-3xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
             >
               Clear All Filters
             </button>
@@ -147,117 +175,176 @@ const ProductsPageInner = () => {
           {/* Category Filter */}
           {categories.length > 0 && (
             <div className="rounded-[2rem] border bg-white p-5 shadow-sm">
-              <h3 className="mb-3 text-sm font-semibold text-slate-900">Category</h3>
+              <h3 className="mb-3 text-sm font-semibold text-slate-900">
+                Category
+              </h3>
               <Link
                 href="/products"
-                className={`block rounded-2xl px-3 py-2 text-sm transition ${!category ? "bg-blue-600 text-white shadow" : "text-slate-700 hover:bg-slate-50"}`}
+                className={`block rounded-2xl px-3 py-2 text-sm transition ${
+                  !category
+                    ? "bg-blue-600 text-white shadow"
+                    : "text-slate-700 hover:bg-slate-50"
+                }`}
               >
                 All Categories
               </Link>
-              {categories.filter((c) => c.isActive).map((c) => (
-                <Link
-                  key={c.id}
-                  href={`/products?category=${c.id}`}
-                  className={`block rounded-2xl px-3 py-2 text-sm transition ${category === c.id ? "bg-blue-600 text-white shadow" : "text-slate-700 hover:bg-slate-50"}`}
-                >
-                  {c.name}
-                </Link>
-              ))}
+              {categories
+                .filter((c) => c.isActive)
+                .map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/products?category=${c.id}`}
+                    className={`block rounded-2xl px-3 py-2 text-sm transition ${
+                      category === c.id
+                        ? "bg-blue-600 text-white shadow"
+                        : "text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {c.name}
+                  </Link>
+                ))}
             </div>
           )}
 
           {/* Color Filter */}
           {colors.length > 0 && (
             <div className="rounded-lg border bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-800">Color</h3>
-              {colors.filter((c) => c.isActive).map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => updateFilter("color", color === c.id ? "" : c.id)}
-                  className={`flex items-center gap-2 rounded px-2 py-1 text-sm w-full text-left ${color === c.id ? "bg-blue-50 font-medium text-blue-600" : "hover:bg-slate-50"}`}
-                >
-                  <div
-                    className="h-4 w-4 rounded-full border"
-                    style={{ backgroundColor: c.hexCode || c.name.toLowerCase() }}
-                  />
-                  {c.name}
-                </button>
-              ))}
+              <h3 className="mb-3 text-sm font-semibold text-slate-800">
+                Color
+              </h3>
+              {colors
+                .filter((c) => c.isActive)
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() =>
+                      updateFilter("color", color === c.id ? "" : c.id)
+                    }
+                    className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm ${
+                      color === c.id
+                        ? "bg-blue-50 font-medium text-blue-600"
+                        : "hover:bg-slate-50"
+                    }`}
+                  >
+                    <div
+                      className="h-4 w-4 rounded-full border"
+                      style={{
+                        backgroundColor: c.hexCode || c.name.toLowerCase(),
+                      }}
+                    />
+                    {c.name}
+                  </button>
+                ))}
             </div>
           )}
 
           {/* Size Filter */}
           {sizes.length > 0 && (
             <div className="rounded-lg border bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-800">Size</h3>
-              {sizes.filter((s) => s.isActive).map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => updateFilter("size", size === s.id ? "" : s.id)}
-                  className={`block rounded px-2 py-1 text-sm ${size === s.id ? "bg-blue-50 font-medium text-blue-600" : "hover:bg-slate-50"}`}
-                >
-                  {s.name}
-                </button>
-              ))}
+              <h3 className="mb-3 text-sm font-semibold text-slate-800">
+                Size
+              </h3>
+              {sizes
+                .filter((s) => s.isActive)
+                .map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() =>
+                      updateFilter("size", size === s.id ? "" : s.id)
+                    }
+                    className={`block w-full rounded px-2 py-1 text-left text-sm ${
+                      size === s.id
+                        ? "bg-blue-50 font-medium text-blue-600"
+                        : "hover:bg-slate-50"
+                    }`}
+                  >
+                    {s.name}
+                  </button>
+                ))}
             </div>
           )}
 
           {/* Collection Filter */}
           {collections.length > 0 && (
             <div className="rounded-lg border bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-800">Collection</h3>
-              {collections.filter((c) => c.isActive).map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => updateFilter("collection", collection === c.id ? "" : c.id)}
-                  className={`block rounded px-2 py-1 text-sm ${collection === c.id ? "bg-blue-50 font-medium text-blue-600" : "hover:bg-slate-50"}`}
-                >
-                  {c.name}
-                </button>
-              ))}
+              <h3 className="mb-3 text-sm font-semibold text-slate-800">
+                Collection
+              </h3>
+              {collections
+                .filter((c) => c.isActive)
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() =>
+                      updateFilter(
+                        "collection",
+                        collection === c.id ? "" : c.id
+                      )
+                    }
+                    className={`block w-full rounded px-2 py-1 text-left text-sm ${
+                      collection === c.id
+                        ? "bg-blue-50 font-medium text-blue-600"
+                        : "hover:bg-slate-50"
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                ))}
             </div>
           )}
 
           {/* Price Filter */}
           <div className="rounded-lg border bg-white p-4">
-            <h3 className="mb-3 text-sm font-semibold text-slate-800">Price Range</h3>
+            <h3 className="mb-3 text-sm font-semibold text-slate-800">
+              Price Range
+            </h3>
             <div className="flex gap-2">
               <input
                 type="number"
                 placeholder="Min"
                 value={minPrice || ""}
-                onChange={(e) => updateFilter("minPrice", e.target.value)}
+                onChange={(e) =>
+                  updateFilter("minPrice", e.target.value)
+                }
                 className="w-full rounded border px-2 py-1 text-sm"
               />
               <input
                 type="number"
                 placeholder="Max"
                 value={maxPrice || ""}
-                onChange={(e) => updateFilter("maxPrice", e.target.value)}
+                onChange={(e) =>
+                  updateFilter("maxPrice", e.target.value)
+                }
                 className="w-full rounded border px-2 py-1 text-sm"
               />
             </div>
           </div>
         </aside>
 
-        <div>
+        <div className="space-y-6">
           {isLoading ? (
-            <div className="rounded-xl border bg-white p-8 text-center">
-              Loading products...
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
             </div>
           ) : products.length === 0 ? (
             <div className="rounded-xl border bg-white p-8 text-center text-slate-500">
               No products found.
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {products.map((product: Product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {paginatedProducts.map((product: Product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
+            </>
           )}
         </div>
       </div>
@@ -267,7 +354,17 @@ const ProductsPageInner = () => {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<div className="p-8">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-7xl px-4 py-8">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      }
+    >
       <ProductsPageInner />
     </Suspense>
   );

@@ -3,11 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowRight, ShoppingCart } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 
 import api from "@/lib/axios";
 import { useCart } from "@/features/cart/hooks";
 import ProductCard from "./components/ProductCard";
+import { ProductCardSkeleton } from "@/components/common/Skeleton";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -76,16 +77,19 @@ const HomePage = () => {
   const { data: banners = [] } = useQuery<Banner[]>({
     queryKey: ["banners"],
     queryFn: fetchBanners,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ["products", "home"],
     queryFn: () => fetchProducts("/products"),
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories", "home"],
     queryFn: fetchCategories,
+    staleTime: 5 * 60 * 1000,
   });
 
   const activeCategories = useMemo(
@@ -100,7 +104,6 @@ const HomePage = () => {
 
   const displayedProducts = useMemo(() => {
     if (!activeCategory) return products;
-
     return products.filter(
       (product) =>
         product.categoryId === activeCategory ||
@@ -110,28 +113,30 @@ const HomePage = () => {
 
   const hero = banners[0];
 
-  const handleAddToCart = (product: Product) => {
-    const stock =
-      product.variants?.reduce(
-        (sum: number, variant: ProductVariant) => sum + (variant.stock ?? 0),
-        0
-      ) ?? 0;
+  const handleAddToCart = useCallback(
+    (product: Product) => {
+      const stock =
+        product.variants?.reduce(
+          (sum: number, variant: ProductVariant) => sum + (variant.stock ?? 0),
+          0
+        ) ?? 0;
 
-    add({
-      productId: product.id,
-      name: product.name,
-      slug: product.slug,
-      image:
-        product.images?.[0]?.imageUrl || product.imageUrl || null,
-      price: Number(product.price),
-      sellingPrice: Number(product.sellingPrice),
-      quantity: 1,
-      stock,
-      variantId: product.variants?.[0]?.id ?? null,
-      color: product.variants?.[0]?.color?.name ?? null,
-      size: product.variants?.[0]?.size?.name ?? null,
-    });
-  };
+      add({
+        productId: product.id,
+        name: product.name,
+        slug: product.slug,
+        image: product.images?.[0]?.imageUrl || product.imageUrl || null,
+        price: Number(product.price),
+        sellingPrice: Number(product.sellingPrice),
+        quantity: 1,
+        stock,
+        variantId: product.variants?.[0]?.id ?? null,
+        color: product.variants?.[0]?.color?.name ?? null,
+        size: product.variants?.[0]?.size?.name ?? null,
+      });
+    },
+    [add]
+  );
 
   return (
     <div className="mx-auto max-w-7xl space-y-12 px-4 py-8">
@@ -188,6 +193,7 @@ const HomePage = () => {
                   src={category.image}
                   alt={category.name}
                   className="h-40 w-full object-cover transition duration-500 group-hover:scale-105"
+                  loading="lazy"
                 />
               ) : (
                 <div className="flex h-40 items-center justify-center bg-slate-100 text-slate-500">
@@ -214,6 +220,7 @@ const HomePage = () => {
               src={hero.imageUrl}
               alt={hero.title}
               className="h-full w-full object-cover opacity-80"
+              loading="lazy"
             />
             <div className="absolute inset-0 bg-slate-950/60 p-8 sm:p-12">
               <div className="max-w-2xl space-y-4">
@@ -280,8 +287,10 @@ const HomePage = () => {
         </div>
 
         {isLoading ? (
-          <div className="rounded-3xl border bg-white p-10 text-center text-slate-500">
-            Loading products...
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
           </div>
         ) : displayedProducts.length === 0 ? (
           <div className="rounded-3xl border bg-white p-10 text-center text-slate-500">

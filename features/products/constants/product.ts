@@ -6,93 +6,49 @@ export const PRODUCT_DEFAULT_VALUES: ProductFormData = {
   name: "",
   slug: "",
   sku: "",
-
   description: "",
   shortDescription: "",
-
   categoryId: "",
   brandId: "",
-
   collectionIds: [],
-
   material: "",
   weight: undefined,
-
   price: 0,
   discount: 0,
   sellingPrice: 0,
-
   status: "DRAFT",
-
   isReturnable: true,
   isFeatured: false,
   isActive: true,
+  images: [],
+  variants: [],
 };
 
 export const PRODUCT_STATUS_OPTIONS = [
-  {
-    label: "Draft",
-    value: "DRAFT",
-  },
-  {
-    label: "Published",
-    value: "PUBLISHED",
-  },
-  {
-    label: "Out Of Stock",
-    value: "OUT_OF_STOCK",
-  },
-  {
-    label: "Archived",
-    value: "ARCHIVED",
-  },
+  { label: "Draft", value: "DRAFT" },
+  { label: "Published", value: "PUBLISHED" },
+  { label: "Out Of Stock", value: "OUT_OF_STOCK" },
+  { label: "Archived", value: "ARCHIVED" },
 ] as const;
 
 export const PRODUCT_MESSAGES = {
   FETCH_SUCCESS: "Products fetched successfully",
   FETCH_ERROR: "Failed to fetch products",
-
   CREATE_SUCCESS: "Product created successfully",
   CREATE_ERROR: "Failed to create product",
-
   UPDATE_SUCCESS: "Product updated successfully",
   UPDATE_ERROR: "Failed to update product",
-
   DELETE_SUCCESS: "Product deleted successfully",
   DELETE_ERROR: "Failed to delete product",
 } as const;
 
 export const PRODUCT_TABLE_COLUMNS = [
-  {
-    key: "image",
-    label: "Image",
-  },
-  {
-    key: "name",
-    label: "Product",
-  },
-  {
-    key: "sku",
-    label: "SKU",
-  },
-  {
-    key: "category",
-    label: "Category",
-  },
-  {
-    key: "price",
-    label: "Price",
-  },
-  {
-    key: "stock",
-    label: "Stock",
-  },
-  {
-    key: "status",
-    label: "Status",
-  },
-  {
-    key: "actions",
-    label: "Actions",
-  },
+  { key: "image", label: "Image" },
+  { key: "name", label: "Product" },
+  { key: "sku", label: "SKU" },
+  { key: "category", label: "Category" },
+  { key: "price", label: "Price" },
+  { key: "stock", label: "Stock" },
+  { key: "status", label: "Status" },
+  { key: "actions", label: "Actions" },
 ] as const;
