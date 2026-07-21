@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Upload, Trash2, Star } from "lucide-react";
 
 interface ProductImage {
@@ -84,7 +83,7 @@ const ProductImageUpload = ({
               key={index}
               className="relative overflow-hidden rounded-xl border"
             >
-              <Image
+              <img
                 src={image.imageUrl}
                 alt={image.altText || "Product"}
                 width={300}

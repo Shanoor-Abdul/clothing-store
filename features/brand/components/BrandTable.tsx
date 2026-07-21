@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Pencil, Trash2 } from "lucide-react";
 
 import { Brand } from "../types/brand";
@@ -65,7 +64,7 @@ const BrandTable = ({
               <td className="px-5 py-4">
 
                 {brand.logo ? (
-                  <Image
+                  <img
                     src={brand.logo}
                     alt={brand.name}
                     width={50}

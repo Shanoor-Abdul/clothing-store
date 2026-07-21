@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import {
@@ -26,8 +27,8 @@ const CollectionForm = ({
     register,
     handleSubmit,
     reset,
-    watch,
     setValue,
+    control,
     formState: { errors },
   } = useForm<CollectionFormData>({
     resolver: zodResolver(CollectionSchema),
@@ -38,7 +39,9 @@ const CollectionForm = ({
     reset({ ...COLLECTION_DEFAULT_VALUES, ...defaultValues });
   }, [defaultValues, reset]);
 
-  const name = watch("name");
+  const name = useWatch({ control, name: "name" });
+  const imageValue = useWatch({ control, name: "image" });
+  const imagePreview = imageValue ?? "";
 
   useEffect(() => {
     if (!name) return;
@@ -84,13 +87,50 @@ const CollectionForm = ({
 
       <div>
         <label className="mb-2 block text-sm font-medium text-slate-700">
-          Image URL
+          Image
         </label>
-        <input
-          {...register("image")}
-          placeholder="https://..."
-          className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-        />
+        <div className="flex flex-col gap-3">
+          <input
+            {...register("image")}
+            placeholder="https://... or upload a file"
+            className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+          />
+
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+            Upload Image
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                if (e.target.files?.[0]) {
+                  const file = e.target.files[0];
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    if (typeof reader.result === "string") {
+                      setValue("image", reader.result, {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      });
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
+          </label>
+
+          {imagePreview && (
+            <Image
+              src={imagePreview}
+              alt="Collection preview"
+              width={240}
+              height={160}
+              className="rounded-lg border object-contain"
+              unoptimized
+            />
+          )}
+        </div>
       </div>
 
       <div>

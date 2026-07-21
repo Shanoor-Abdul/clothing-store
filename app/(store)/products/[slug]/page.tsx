@@ -1,10 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Minus, Plus, ShoppingCart, Heart } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 
 import api from "@/lib/axios";
@@ -45,6 +45,10 @@ const ProductDetailPage = () => {
   const [selectedVariant, setSelectedVariant] = useState<
     ProductVariant | null
   >(null);
+  const [selectedColorIds, setSelectedColorIds] =
+    useState<string[]>([]);
+  const [selectedSizeIds, setSelectedSizeIds] =
+    useState<string[]>([]);
   const [activeImage, setActiveImage] = useState<string | null>(null);
 
   const { data: product, isLoading } = useQuery({
@@ -72,14 +76,54 @@ const ProductDetailPage = () => {
   const images = product.images ?? [];
   const image = activeImage || images[0]?.imageUrl;
   const variants = product.variants || [];
+  const activeVariants = variants.filter(
+    (variant) => variant.isActive
+  );
+
+  const availableColors = Array.from(
+    new Map(
+      activeVariants
+        .filter((variant) => variant.color)
+        .map((variant) => [variant.color!.id, variant.color!])
+    ).values()
+  );
+
+  const availableSizes = Array.from(
+    new Map(
+      activeVariants
+        .filter((variant) => variant.size)
+        .map((variant) => [variant.size!.id, variant.size!])
+    ).values()
+  );
+
+  const filteredVariants = activeVariants.filter((variant) => {
+    const matchesColor =
+      selectedColorIds.length === 0 ||
+      (variant.colorId &&
+        selectedColorIds.includes(variant.colorId));
+    const matchesSize =
+      selectedSizeIds.length === 0 ||
+      (variant.sizeId &&
+        selectedSizeIds.includes(variant.sizeId));
+    return matchesColor && matchesSize;
+  });
+
+  const currentVariant =
+    selectedVariant &&
+    filteredVariants.some(
+      (variant) => variant.id === selectedVariant.id
+    )
+      ? selectedVariant
+      : filteredVariants[0] || null;
+
   const totalVariantStock = variants.reduce(
     (sum, variant) => sum + (variant.stock ?? 0),
     0
   );
   const fallbackStock =
     product.isActive && product.status !== "OUT_OF_STOCK" ? 10 : 0;
-  const stock = selectedVariant
-    ? selectedVariant.stock
+  const stock = currentVariant
+    ? currentVariant.stock
     : totalVariantStock > 0
     ? totalVariantStock
     : fallbackStock;
@@ -94,9 +138,9 @@ const ProductDetailPage = () => {
       sellingPrice: Number(product.sellingPrice),
       quantity,
       stock,
-      variantId: selectedVariant?.id ?? null,
-      color: selectedVariant?.color?.name ?? null,
-      size: selectedVariant?.size?.name ?? null,
+      variantId: currentVariant?.id ?? null,
+      color: currentVariant?.color?.name ?? null,
+      size: currentVariant?.size?.name ?? null,
     });
 
     toast.success("Added to cart");
@@ -186,7 +230,19 @@ const ProductDetailPage = () => {
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div className="rounded-3xl border bg-slate-50 p-4">
                 <p className="text-sm font-semibold text-slate-600">Brand</p>
-                <p className="mt-2 text-base text-slate-900">
+                {product.brand?.logo ? (
+                  <div className="mt-2 mb-3 h-16 w-16 overflow-hidden rounded-xl border bg-white">
+                    <Image
+                      src={product.brand.logo}
+                      alt={product.brand.name}
+                      width={64}
+                      height={64}
+                      className="h-full w-full object-contain"
+                      unoptimized
+                    />
+                  </div>
+                ) : null}
+                <p className="text-base text-slate-900">
                   {product.brand?.name || "Unknown"}
                 </p>
               </div>
@@ -224,20 +280,97 @@ const ProductDetailPage = () => {
               </div>
             </div>
 
-            {variants.length > 0 && (
+            {availableColors.length > 0 && (
               <div className="mt-6">
                 <h3 className="mb-3 text-sm font-medium text-slate-700">
-                  Select Variant
+                  Available Colors
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {variants.map((v) => (
+                  {availableColors.map((color) => {
+                    const isSelected = selectedColorIds.includes(
+                      color.id
+                    );
+
+                    return (
+                      <button
+                        key={color.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedColorIds((current) =>
+                            current.includes(color.id)
+                              ? current.filter(
+                                  (id) => id !== color.id
+                                )
+                              : [...current, color.id]
+                          );
+                        }}
+                        className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm transition ${
+                          isSelected
+                            ? "border-blue-600 bg-blue-50 text-blue-700"
+                            : "border-slate-200 text-slate-700 hover:border-slate-400"
+                        }`}
+                      >
+                        <span
+                          className="h-4 w-4 rounded-full border"
+                          style={{
+                            backgroundColor:
+                              color.hexCode || color.name.toLowerCase(),
+                          }}
+                        />
+                        {color.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {availableSizes.length > 0 && (
+              <div className="mt-6">
+                <h3 className="mb-3 text-sm font-medium text-slate-700">
+                  Available Sizes
+                </h3>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {availableSizes.map((size) => (
+                    <label
+                      key={size.id}
+                      className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border px-4 py-2 text-sm transition hover:border-slate-400"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSizeIds.includes(size.id)}
+                        onChange={() => {
+                          setSelectedSizeIds((current) =>
+                            current.includes(size.id)
+                              ? current.filter(
+                                  (id) => id !== size.id
+                                )
+                              : [...current, size.id]
+                          );
+                        }}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                      />
+                      {size.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {filteredVariants.length > 0 ? (
+              <div className="mt-6">
+                <h3 className="mb-3 text-sm font-medium text-slate-700">
+                  Matching Variants
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {filteredVariants.map((v) => (
                     <button
                       key={v.id}
                       type="button"
                       onClick={() => setSelectedVariant(v)}
                       disabled={v.stock === 0}
                       className={`rounded-2xl border px-4 py-2 text-sm transition ${
-                        selectedVariant?.id === v.id
+                        currentVariant?.id === v.id
                           ? "border-blue-600 bg-blue-50 text-blue-700"
                           : "border-slate-200 text-slate-700 hover:border-slate-400"
                       } ${v.stock === 0 ? "opacity-40" : ""}`}
@@ -248,7 +381,11 @@ const ProductDetailPage = () => {
                   ))}
                 </div>
               </div>
-            )}
+            ) : variants.length > 0 ? (
+              <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                No variants match the selected colors or sizes.
+              </div>
+            ) : null}
 
             <div className="mt-6 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
               <button

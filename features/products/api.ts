@@ -4,6 +4,7 @@ import {
   Product,
   CreateProductPayload,
   UpdateProductPayload,
+  ProductImage,
 } from "./types/product";
 
 interface ApiResponse<T> {
@@ -13,6 +14,21 @@ interface ApiResponse<T> {
 }
 
 const BASE_URL = "/admin/products";
+
+const readFileAsDataUrl = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Unable to read file"));
+      }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+};
 
 export const getProducts = async (): Promise<Product[]> => {
   const { data } =
@@ -61,4 +77,28 @@ export const deleteProduct = async (
   id: string
 ): Promise<void> => {
   await api.delete(`${BASE_URL}/${id}`);
+};
+
+export const uploadProductImage = async (
+  productId: string,
+  file: File
+): Promise<ProductImage> => {
+  const imageUrl = await readFileAsDataUrl(file);
+
+  const { data } = await api.post<
+    ApiResponse<ProductImage>
+  >("/admin/products/images", {
+    productId,
+    imageUrl,
+    altText: file.name,
+    displayOrder: 0,
+  });
+
+  return data.data;
+};
+
+export const deleteProductImage = async (
+  id: string
+): Promise<void> => {
+  await api.delete(`/admin/products/images?id=${id}`);
 };
