@@ -38,8 +38,10 @@ export interface Product {
   brand?: {
     id: string;
     name: string;
+    logo?: string | null;
   };
 
+  imageUrl?: string | null;
   images?: ProductImage[];
 
   videos?: ProductVideo[];

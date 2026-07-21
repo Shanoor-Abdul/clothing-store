@@ -5,6 +5,7 @@ import {
   CreateProductPayload,
   UpdateProductPayload,
   ProductImage,
+  ProductVariant,
 } from "./types/product";
 
 interface ApiResponse<T> {
@@ -77,6 +78,64 @@ export const deleteProduct = async (
   id: string
 ): Promise<void> => {
   await api.delete(`${BASE_URL}/${id}`);
+};
+
+export interface CreateProductVariantPayload {
+  productId: string;
+  colorId?: string;
+  sizeId?: string;
+  sku: string;
+  barcode?: string;
+  stock: number;
+  price?: number;
+  isActive: boolean;
+}
+
+export interface UpdateProductVariantPayload {
+  id: string;
+  colorId?: string;
+  sizeId?: string;
+  sku: string;
+  barcode?: string;
+  stock: number;
+  price?: number;
+  isActive: boolean;
+}
+
+export const getProductVariants = async (
+  productId: string
+): Promise<ProductVariant[]> => {
+  const { data } = await api.get<
+    ApiResponse<ProductVariant[]>
+  >(`/admin/products/variants?productId=${productId}`);
+
+  return data.data;
+};
+
+export const createProductVariant = async (
+  payload: CreateProductVariantPayload
+): Promise<ProductVariant> => {
+  const { data } = await api.post<
+    ApiResponse<ProductVariant>
+  >("/admin/products/variants", payload);
+
+  return data.data;
+};
+
+export const updateProductVariant = async (
+  payload: UpdateProductVariantPayload
+): Promise<ProductVariant> => {
+  const { data } = await api.put<
+    ApiResponse<ProductVariant>
+  >("/admin/products/variants", payload);
+
+  return data.data;
+};
+
+export const deleteProductVariant = async (
+  id: string
+): Promise<void> => {
+  await api.delete(`/admin/products/variants?id=${id}`);
 };
 
 export const uploadProductImage = async (

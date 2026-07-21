@@ -74,7 +74,8 @@ const ProductDetailPage = () => {
   }
 
   const images = product.images ?? [];
-  const image = activeImage || images[0]?.imageUrl;
+  const image =
+    activeImage || images[0]?.imageUrl || product.imageUrl || null;
   const variants = product.variants || [];
   const activeVariants = variants.filter(
     (variant) => variant.isActive
