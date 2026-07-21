@@ -18,6 +18,7 @@ interface ProductCardProps {
     sellingPrice: number | string;
     price: number | string;
     discount?: number | null;
+    imageUrl?: string | null;
     images?: { imageUrl: string }[];
     isFeatured?: boolean;
     isActive?: boolean;
@@ -33,7 +34,7 @@ const ProductCard = ({
   onAddToCart,
   actionLabel = "Add",
 }: ProductCardProps) => {
-  const image = product.images?.[0]?.imageUrl;
+  const image = product.images?.[0]?.imageUrl || product.imageUrl || null;
   const variantStock =
     product.variants?.reduce(
       (sum, variant) => sum + (variant.stock ?? 0),

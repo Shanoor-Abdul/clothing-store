@@ -4,12 +4,12 @@ import { Plus, Trash2 } from "lucide-react";
 
 export interface ProductVariant {
   id?: string;
-  colorId: string;
-  sizeId: string;
+  colorId?: string | null;
+  sizeId?: string | null;
   sku: string;
-  barcode?: string;
+  barcode?: string | null;
   stock: number;
-  price?: number;
+  price?: number | null;
   isActive: boolean;
 }
 
@@ -108,7 +108,7 @@ const ProductVariantForm = ({
                   </label>
 
                   <select
-                    value={variant.colorId}
+                    value={variant.colorId ?? ""}
                     onChange={(e) =>
                       onChange(
                         index,
@@ -139,7 +139,7 @@ const ProductVariantForm = ({
                   </label>
 
                   <select
-                    value={variant.sizeId}
+                    value={variant.sizeId ?? ""}
                     onChange={(e) =>
                       onChange(
                         index,

@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useQuery } from "@tanstack/react-query";
 import { Loader2, Trash2, Heart } from "lucide-react";
 
 import { useAppSelector } from "@/store";
@@ -44,9 +43,10 @@ const WishlistPage = () => {
         </div>
       ) : (
         <div className="mt-6 space-y-3">
-          {items.map((item: any) => {
+          {items.map((item: { id: string; product: { name: string; slug: string; images?: { imageUrl: string }[]; imageUrl?: string | null } }) => {
             const product = item.product;
-            const image = product?.images?.[0]?.imageUrl;
+            const image =
+              product?.images?.[0]?.imageUrl || product?.imageUrl || null;
 
             return (
               <div

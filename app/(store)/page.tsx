@@ -46,6 +46,7 @@ interface Product {
   price: number | string;
   sellingPrice: number | string;
   discount?: number | null;
+  imageUrl?: string | null;
   images?: { imageUrl: string }[];
   variants?: ProductVariant[];
   categoryId: string;
@@ -120,7 +121,8 @@ const HomePage = () => {
       productId: product.id,
       name: product.name,
       slug: product.slug,
-      image: product.images?.[0]?.imageUrl ?? null,
+      image:
+        product.images?.[0]?.imageUrl || product.imageUrl || null,
       price: Number(product.price),
       sellingPrice: Number(product.sellingPrice),
       quantity: 1,

@@ -76,8 +76,8 @@ export const setAuthCookies = async (
 export const clearAuthCookies = async () => {
   const cookieStore = await cookies();
 
-  cookieStore.delete(ACCESS_TOKEN_COOKIE, { path: "/" });
-  cookieStore.delete(REFRESH_TOKEN_COOKIE, { path: "/" });
+  cookieStore.delete({ name: ACCESS_TOKEN_COOKIE, path: "/" });
+  cookieStore.delete({ name: REFRESH_TOKEN_COOKIE, path: "/" });
 };
 
 export const getAccessTokenFromCookies = async (): Promise<

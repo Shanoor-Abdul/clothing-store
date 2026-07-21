@@ -5,7 +5,7 @@ import { Upload, Trash2, Star } from "lucide-react";
 interface ProductImage {
   id?: string;
   imageUrl: string;
-  altText?: string;
+  altText?: string | null;
   displayOrder: number;
   isFeatured?: boolean;
 }
