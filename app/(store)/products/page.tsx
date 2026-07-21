@@ -1,13 +1,17 @@
 "use client";
 
+import { Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Suspense, useMemo, useState } from "react";
 
 import api from "@/lib/axios";
-import { formatCurrency } from "@/utils";
 import ProductCard from "../components/ProductCard";
+import { Category } from "@/features/category/types/category";
+import { Color } from "@/features/color/types/color";
+import { Size } from "@/features/size/types/size";
+import { Collection } from "@/features/collection/types/collection";
+import { Product } from "@/features/products/types/product";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -16,27 +20,27 @@ interface ApiResponse<T> {
 }
 
 const fetchProducts = async (url: string) => {
-  const { data } = await api.get<ApiResponse<any[]>>(url);
+  const { data } = await api.get<ApiResponse<Product[]>>(url);
   return data.data;
 };
 
 const fetchCategories = async () => {
-  const { data } = await api.get<ApiResponse<any[]>>("/categories");
+  const { data } = await api.get<ApiResponse<Category[]>>("/categories");
   return data.data;
 };
 
 const fetchColors = async () => {
-  const { data } = await api.get<ApiResponse<any[]>>("/colors");
+  const { data } = await api.get<ApiResponse<Color[]>>("/colors");
   return data.data;
 };
 
 const fetchSizes = async () => {
-  const { data } = await api.get<ApiResponse<any[]>>("/sizes");
+  const { data } = await api.get<ApiResponse<Size[]>>("/sizes");
   return data.data;
 };
 
 const fetchCollections = async () => {
-  const { data } = await api.get<ApiResponse<any[]>>("/collections");
+  const { data } = await api.get<ApiResponse<Collection[]>>("/collections");
   return data.data;
 };
 
@@ -112,14 +116,29 @@ const ProductsPageInner = () => {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold">{title}</h1>
+      <div className="mb-8 rounded-[2rem] border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-900/5 sm:p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">{title}</h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Browse products, apply filters, and discover your next outfit.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <span className="rounded-full bg-slate-100 px-3 py-2 text-slate-700">
+              {products.length} products
+            </span>
+            {featured && <span className="rounded-full bg-blue-50 px-3 py-2 text-blue-600">Featured only</span>}
+          </div>
+        </div>
+      </div>
 
-      <div className="grid gap-6 md:grid-cols-[250px_1fr]">
-        <aside className="space-y-4">
+      <div className="grid gap-6 md:grid-cols-[280px_1fr]">
+        <aside className="space-y-4 md:sticky md:top-6">
           {hasActiveFilters && (
             <button
               onClick={clearAllFilters}
-              className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium hover:bg-slate-200"
+              className="rounded-3xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
             >
               Clear All Filters
             </button>
@@ -127,19 +146,19 @@ const ProductsPageInner = () => {
 
           {/* Category Filter */}
           {categories.length > 0 && (
-            <div className="rounded-lg border bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-800">Category</h3>
+            <div className="rounded-[2rem] border bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold text-slate-900">Category</h3>
               <Link
                 href="/products"
-                className={`block rounded px-2 py-1 text-sm ${!category ? "bg-blue-50 font-medium text-blue-600" : "hover:bg-slate-50"}`}
+                className={`block rounded-2xl px-3 py-2 text-sm transition ${!category ? "bg-blue-600 text-white shadow" : "text-slate-700 hover:bg-slate-50"}`}
               >
                 All Categories
               </Link>
-              {categories.filter((c: any) => c.isActive).map((c: any) => (
+              {categories.filter((c) => c.isActive).map((c) => (
                 <Link
                   key={c.id}
                   href={`/products?category=${c.id}`}
-                  className={`block rounded px-2 py-1 text-sm ${category === c.id ? "bg-blue-50 font-medium text-blue-600" : "hover:bg-slate-50"}`}
+                  className={`block rounded-2xl px-3 py-2 text-sm transition ${category === c.id ? "bg-blue-600 text-white shadow" : "text-slate-700 hover:bg-slate-50"}`}
                 >
                   {c.name}
                 </Link>
@@ -151,7 +170,7 @@ const ProductsPageInner = () => {
           {colors.length > 0 && (
             <div className="rounded-lg border bg-white p-4">
               <h3 className="mb-3 text-sm font-semibold text-slate-800">Color</h3>
-              {colors.filter((c: any) => c.isActive).map((c: any) => (
+              {colors.filter((c) => c.isActive).map((c) => (
                 <button
                   key={c.id}
                   onClick={() => updateFilter("color", color === c.id ? "" : c.id)}
@@ -159,7 +178,7 @@ const ProductsPageInner = () => {
                 >
                   <div
                     className="h-4 w-4 rounded-full border"
-                    style={{ backgroundColor: c.hex || c.name.toLowerCase() }}
+                    style={{ backgroundColor: c.hexCode || c.name.toLowerCase() }}
                   />
                   {c.name}
                 </button>
@@ -171,7 +190,7 @@ const ProductsPageInner = () => {
           {sizes.length > 0 && (
             <div className="rounded-lg border bg-white p-4">
               <h3 className="mb-3 text-sm font-semibold text-slate-800">Size</h3>
-              {sizes.filter((s: any) => s.isActive).map((s: any) => (
+              {sizes.filter((s) => s.isActive).map((s) => (
                 <button
                   key={s.id}
                   onClick={() => updateFilter("size", size === s.id ? "" : s.id)}
@@ -187,7 +206,7 @@ const ProductsPageInner = () => {
           {collections.length > 0 && (
             <div className="rounded-lg border bg-white p-4">
               <h3 className="mb-3 text-sm font-semibold text-slate-800">Collection</h3>
-              {collections.filter((c: any) => c.isActive).map((c: any) => (
+              {collections.filter((c) => c.isActive).map((c) => (
                 <button
                   key={c.id}
                   onClick={() => updateFilter("collection", collection === c.id ? "" : c.id)}
@@ -232,7 +251,7 @@ const ProductsPageInner = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {products.map((product: any) => (
+              {products.map((product: Product) => (
                 <ProductCard
                   key={product.id}
                   product={product}

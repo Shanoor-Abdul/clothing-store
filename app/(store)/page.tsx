@@ -179,7 +179,7 @@ const HomePage = () => {
             <Link
               key={category.id}
               href={`/products?category=${category.id}`}
-              className="group overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+              className="group overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-2xl"
             >
               {category.image ? (
                 <img

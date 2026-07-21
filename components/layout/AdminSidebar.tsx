@@ -79,12 +79,10 @@ const AdminSidebar = () => {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-slate-900 text-white h-screen sticky top-0 overflow-y-auto">
-      <div className="border-b border-slate-700 p-6">
-        <h1 className="text-2xl font-bold">Clothing Admin</h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Management Panel
-        </p>
+    <aside className="w-72 bg-slate-950 text-white h-screen sticky top-0 overflow-y-auto border-r border-slate-800 shadow-xl shadow-slate-950/30">
+      <div className="border-b border-slate-800 p-6">
+        <h1 className="text-2xl font-semibold text-white">Clothing Admin</h1>
+        <p className="mt-1 text-sm text-slate-400">Management Panel</p>
       </div>
 
       <nav className="p-4">
@@ -94,10 +92,10 @@ const AdminSidebar = () => {
               <Link
                 href={href}
                 className={clsx(
-                  "flex items-center gap-3 rounded-lg px-4 py-3 transition-all duration-200",
+                  "flex items-center gap-3 rounded-3xl px-4 py-3 text-sm transition duration-200",
                   pathname === href
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    ? "bg-gradient-to-r from-sky-600 to-blue-600 text-white shadow-lg shadow-sky-500/20"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white hover:shadow-inner"
                 )}
               >
                 <Icon size={20} />
