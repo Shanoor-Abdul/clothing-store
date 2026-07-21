@@ -48,7 +48,29 @@ export async function GET(
       return ApiResponse.error("Product not found", 404);
     }
 
-    return ApiResponse.success(product, "Product fetched");
+    const relatedProducts = await prisma.product.findMany({
+      where: {
+        categoryId: product.categoryId,
+        id: { not: product.id },
+        isActive: true,
+        status: "PUBLISHED",
+      },
+      include: {
+        images: {
+          orderBy: { displayOrder: "asc" },
+          take: 1,
+        },
+      },
+      take: 6,
+      orderBy: { createdAt: "desc" },
+    });
+
+    const response = {
+      ...product,
+      relatedProducts,
+    };
+
+    return ApiResponse.success(response, "Product fetched");
   } catch (error) {
     console.error(error);
 

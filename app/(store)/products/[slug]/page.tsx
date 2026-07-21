@@ -12,6 +12,7 @@ import { formatCurrency } from "@/utils";
 import { useCart } from "@/features/cart/hooks";
 import { useAppSelector } from "@/store";
 import { useAddToWishlist } from "@/features/wishlist/hooks";
+import ProductCard from "../../components/ProductCard";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -232,6 +233,23 @@ const ProductDetailPage = () => {
             </div>
           )}
         </div>
+
+        {/* Related Products */}
+        {product.relatedProducts && product.relatedProducts.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-xl font-bold">
+              More from {product.category.name}
+            </h2>
+            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+              {product.relatedProducts.map((related: any) => (
+                <ProductCard
+                  key={related.id}
+                  product={related}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -25,7 +25,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace(role === "ADMIN" ? "/admin" : "/account");
+      router.replace(role === "ADMIN" ? "/admin" : "/products");
     }
   }, [isAuthenticated, role, router]);
 
