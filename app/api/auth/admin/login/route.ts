@@ -7,7 +7,6 @@ import {
   setAuthCookies,
   signAccessToken,
   signRefreshToken,
-  verifyRefreshToken,
 } from "@/lib/auth";
 
 import prisma from "@/lib/prisma";
@@ -91,7 +90,7 @@ export async function GET() {
 }
 
 export async function DELETE() {
-  clearAuthCookies();
+  await clearAuthCookies();
 
   return ApiResponse.success(null, "Logged out");
 }

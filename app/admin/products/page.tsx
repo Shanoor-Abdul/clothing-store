@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCategories } from "@/features/category/hooks/useCategories";
 import { useCreateProduct, useDeleteProduct, useProducts, useUpdateProduct } from "@/features/products/hooks/useProducts";
 import { Product } from "@/features/products/types/product";
+import { uploadProductImage, deleteProductImage } from "@/features/products/api";
 import { ProductFormData } from "@/features/products/validation/product.schema";
 import ProductForm from "@/features/products/components/ProductForm";
-import { PRODUCT_DEFAULT_VALUES } from "@/features/products/constants/product";
+import ProductImageUpload from "@/features/products/components/ProductImageUpload";
+import {
+  PRODUCT_DEFAULT_VALUES,
+  PRODUCT_QUERY_KEY,
+} from "@/features/products/constants/product";
 import ProductTable from "@/features/products/components/ProductTable";
 import DeleteProductModal from "@/features/products/components/DeleteProductModal";
 import { useBrands } from "@/features/brand/hooks/useBrands";
@@ -32,12 +38,11 @@ const ProductsPage = () => {
   const updateMutation =
     useUpdateProduct();
 
-  const deleteMutation =
-    useDeleteProduct();
+  const queryClient = useQueryClient();
+  const deleteMutation = useDeleteProduct();
 
   const [editingProduct, setEditingProduct] =
     useState<Product | null>(null);
-
   const [deleteProduct, setDeleteProduct] =
     useState<Product | null>(null);
 
@@ -60,6 +65,62 @@ const ProductsPage = () => {
     }
   };
 
+  const productImages = editingProduct?.images ?? [];
+
+  const handleUploadImages = async (
+    files: FileList
+  ) => {
+    if (!editingProduct) return;
+
+    try {
+      const uploadedImages = await Promise.all(
+        Array.from(files).map((file) =>
+          uploadProductImage(editingProduct.id, file)
+        )
+      );
+
+      setEditingProduct((current) =>
+        current
+          ? {
+              ...current,
+              images: [
+                ...(current.images ?? []),
+                ...uploadedImages,
+              ],
+            }
+          : current
+      );
+      await queryClient.invalidateQueries({
+        queryKey: PRODUCT_QUERY_KEY,
+      });
+    } catch (error) {
+      console.error("Failed to upload product images", error);
+    }
+  };
+
+  const handleDeleteImage = async (index: number) => {
+    const image = productImages[index];
+    if (!image?.id) return;
+
+    try {
+      await deleteProductImage(image.id);
+      setEditingProduct((current) =>
+        current
+          ? {
+              ...current,
+              images: current.images?.filter(
+                (_, i) => i !== index
+              ),
+            }
+          : current
+      );
+      await queryClient.invalidateQueries({
+        queryKey: PRODUCT_QUERY_KEY,
+      });
+    } catch (error) {
+      console.error("Failed to delete product image", error);
+    }
+  };
   const handleDelete = async () => {
     if (!deleteProduct) return;
 
@@ -102,6 +163,15 @@ const ProductsPage = () => {
         brands={brands}
         collections={[]}
       />
+
+      {editingProduct && (
+        <ProductImageUpload
+          images={productImages}
+          onUpload={handleUploadImages}
+          onDelete={handleDeleteImage}
+          onFeatured={() => undefined}
+        />
+      )}
 
       {isLoading ? (
         <div className="rounded-xl border bg-white p-8 text-center">
