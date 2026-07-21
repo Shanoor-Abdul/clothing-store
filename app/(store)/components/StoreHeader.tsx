@@ -18,7 +18,6 @@ const StoreHeader = () => {
   const isAuthenticated = useAppSelector(
     (state) => state.auth.isAuthenticated
   );
-  const user = useAppSelector((state) => state.auth.user);
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -33,9 +32,12 @@ const StoreHeader = () => {
   };
 
   const handleLogout = async () => {
-    await logout.mutateAsync();
-    dispatch(clearAuth());
-    router.push("/login");
+    try {
+      await logout.mutateAsync();
+      dispatch(clearAuth());
+    } finally {
+      router.push("/login");
+    }
   };
 
   return (
