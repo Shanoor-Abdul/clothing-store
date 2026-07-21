@@ -9,7 +9,7 @@ export async function GET() {
 
     const activeBrands =
       brands.filter(
-        (brand) => brand.isActive
+            (brand: any) => brand.isActive
       );
 
     return ApiResponse.success(

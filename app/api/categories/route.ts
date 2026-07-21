@@ -6,7 +6,7 @@ export async function GET() {
     const categories = await CategoryService.getAll();
 
     const activeCategories = categories.filter(
-      (category) => category.isActive
+          (category: any) => category.isActive
     );
 
     return ApiResponse.success(
