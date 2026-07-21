@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, ShoppingCart, User, LogOut } from "lucide-react";
+import { Search, ShoppingCart, User, LogOut, Heart } from "lucide-react";
 
 import { useCart } from "@/features/cart/hooks";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -79,6 +79,13 @@ const StoreHeader = () => {
 
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
+              <Link
+                href="/account/wishlist"
+                className="rounded-full p-2 hover:bg-slate-100"
+                aria-label="Wishlist"
+              >
+                <Heart size={22} />
+              </Link>
               <Link
                 href="/account"
                 className="flex items-center gap-2 rounded-full p-2 hover:bg-slate-100"

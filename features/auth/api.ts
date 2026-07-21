@@ -52,6 +52,21 @@ export const getMe = async (): Promise<AuthResponse> => {
   return data.data;
 };
 
+export const getProfile = async (): Promise<any> => {
+  const { data } = await api.get<ApiResponse<any>>("/user");
+  return data.data;
+};
+
+export const updateProfile = async (
+  payload: Record<string, unknown>
+): Promise<any> => {
+  const { data } = await api.put<ApiResponse<any>>(
+    "/user",
+    payload
+  );
+  return data.data;
+};
+
 export const logout = async (): Promise<void> => {
   await api.post("/auth/logout");
 };

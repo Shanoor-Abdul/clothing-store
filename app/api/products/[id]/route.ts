@@ -14,13 +14,12 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const where = id.length > 20
-      ? { slug: id }
-      : { id };
-
     const product = await prisma.product.findFirst({
       where: {
-        ...where,
+        OR: [
+          { id },
+          { slug: id },
+        ],
         isActive: true,
         status: "PUBLISHED",
       },

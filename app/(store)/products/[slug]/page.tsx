@@ -3,13 +3,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Minus, Plus, ShoppingCart } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Heart } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import api from "@/lib/axios";
 import { formatCurrency } from "@/utils";
 import { useCart } from "@/features/cart/hooks";
+import { useAppSelector } from "@/store";
+import { useAddToWishlist } from "@/features/wishlist/hooks";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -29,6 +31,10 @@ const ProductDetailPage = () => {
   const router = useRouter();
   const slug = String(params.slug);
   const { add } = useCart();
+  const isAuthenticated = useAppSelector(
+    (state) => state.auth.isAuthenticated
+  );
+  const addWishlist = useAddToWishlist();
 
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState<
@@ -197,6 +203,23 @@ const ProductDetailPage = () => {
             >
               <ShoppingCart size={18} />
               {stock === 0 ? "Out of Stock" : "Add to Cart"}
+            </button>
+
+            <button
+              onClick={() => {
+                if (!isAuthenticated) {
+                  toast.error("Please login to save to wishlist");
+                  router.push("/login");
+                  return;
+                }
+                addWishlist.mutate(product.id, {
+                  onSuccess: () => toast.success("Added to wishlist"),
+                });
+              }}
+              className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-3 font-medium text-slate-700 hover:bg-slate-50"
+              aria-label="Add to wishlist"
+            >
+              <Heart size={18} />
             </button>
           </div>
 

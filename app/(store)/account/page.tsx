@@ -1,50 +1,52 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import Link from "next/link";
+import { Package, MapPin, Heart } from "lucide-react";
 
 import { useAppSelector } from "@/store";
-import { useCart } from "@/features/cart/hooks";
 
 const AccountPage = () => {
-  const router = useRouter();
-  const isAuthenticated = useAppSelector(
-    (state) => state.auth.isAuthenticated
-  );
   const user = useAppSelector((state) => state.auth.user);
 
-  useEffect(() => {
-    if (!isAuthenticated) router.replace("/login");
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated || !user) return null;
-
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-2xl font-bold">My Account</h1>
+    <div>
+      <h1 className="text-2xl font-bold">Welcome back</h1>
       <p className="mt-1 text-slate-500">
-        {user.name} {user.email ? `(${user.email})` : ""}
+        Manage your profile, orders and addresses.
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Link
           href="/account/orders"
-          className="rounded-xl border bg-white p-6 shadow-sm hover:shadow-md"
+          className="flex items-center gap-3 rounded-xl border bg-white p-5 shadow-sm hover:shadow-md"
         >
-          <h2 className="font-semibold">My Orders</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            View and track your orders.
-          </p>
+          <Package className="text-blue-600" size={24} />
+          <div>
+            <p className="font-semibold">Orders</p>
+            <p className="text-sm text-slate-500">Track purchases</p>
+          </div>
         </Link>
+
         <Link
-          href="/cart"
-          className="rounded-xl border bg-white p-6 shadow-sm hover:shadow-md"
+          href="/account/addresses"
+          className="flex items-center gap-3 rounded-xl border bg-white p-5 shadow-sm hover:shadow-md"
         >
-          <h2 className="font-semibold">Cart</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Review items in your cart.
-          </p>
+          <MapPin className="text-blue-600" size={24} />
+          <div>
+            <p className="font-semibold">Addresses</p>
+            <p className="text-sm text-slate-500">Manage shipping</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/account/wishlist"
+          className="flex items-center gap-3 rounded-xl border bg-white p-5 shadow-sm hover:shadow-md"
+        >
+          <Heart className="text-blue-600" size={24} />
+          <div>
+            <p className="font-semibold">Wishlist</p>
+            <p className="text-sm text-slate-500">Saved items</p>
+          </div>
         </Link>
       </div>
     </div>
