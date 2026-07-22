@@ -37,12 +37,16 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error("Image upload error:", error);
+    console.error("Error message:", error?.message);
+    console.error("Error code:", error?.code);
+    
     if (error.code === "P2003") {
       return ApiResponse.error(
         "Product not found or image already exists",
         400
       );
     }
+    
     return ApiResponse.error(
       error.message || "Failed to upload image",
       500

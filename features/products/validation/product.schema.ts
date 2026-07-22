@@ -19,10 +19,8 @@ export const ProductSchema = z.object({
   isFeatured: z.boolean(),
   isActive: z.boolean(),
 
-  // Image upload - array of URLs (existing) or File objects (new uploads)
   images: z.array(z.any()).optional().default([]),
 
-  // Variants
   variants: z
     .array(
       z.object({
