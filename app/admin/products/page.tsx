@@ -51,7 +51,6 @@ const ProductsPage = () => {
 
   const handleSubmit = async (data: ProductFormData) => {
     try {
-      // Extract images and variants before passing to mutation
       const { images, variants, ...productData } = data;
 
       if (editingProduct) {
@@ -61,23 +60,20 @@ const ProductsPage = () => {
         });
 
         if (updatedProduct) {
-          // Upload new images if any were added via form
-          if (images && images.length > 0) {
-            const newImages = images.filter(
-              (img: unknown) => img instanceof File
-            ) as unknown as File[];
-            if (newImages.length > 0) {
-              setUploadingImages(true);
-              await Promise.all(
-                Array.from(newImages).map((file: File) =>
-                  uploadProductImage(editingProduct.id, file)
-                )
-              );
-              setUploadingImages(false);
-            }
+          const fileImages = images?.filter(
+            (img: unknown) => img instanceof File
+          ) as unknown as File[] || [];
+          
+          if (fileImages.length > 0) {
+            setUploadingImages(true);
+            await Promise.all(
+              fileImages.map((file: File) =>
+                uploadProductImage(editingProduct.id, file)
+              )
+            );
+            setUploadingImages(false);
           }
 
-          // Sync variants
           if (variants && variants.length > 0) {
             const existingIds = new Set(
               (editingProduct.variants || []).map((v) => v.id)
@@ -114,23 +110,20 @@ const ProductsPage = () => {
       } else {
         const createdProduct = await createMutation.mutateAsync(productData);
         if (createdProduct) {
-          // Upload images
-          if (images && images.length > 0) {
-            const fileImages = images.filter(
-              (img: unknown) => img instanceof File
-            ) as unknown as File[];
-            if (fileImages.length > 0) {
-              setUploadingImages(true);
-              await Promise.all(
-                Array.from(fileImages).map((file: File) =>
-                  uploadProductImage(createdProduct.id, file)
-                )
-              );
-              setUploadingImages(false);
-            }
+          const fileImages = images?.filter(
+            (img: unknown) => img instanceof File
+          ) as unknown as File[] || [];
+          
+          if (fileImages.length > 0) {
+            setUploadingImages(true);
+            await Promise.all(
+              fileImages.map((file: File) =>
+                uploadProductImage(createdProduct.id, file)
+              )
+            );
+            setUploadingImages(false);
           }
 
-          // Create variants
           if (variants && variants.length > 0) {
             const variantPromises = variants.map((variant) =>
               createProductVariant({
