@@ -1,14 +1,9 @@
 import { NextRequest } from "next/server";
 
 import { ApiResponse } from "@/lib/api-response";
-import {
-  setAuthCookies,
-  signAccessToken,
-  signRefreshToken,
-} from "@/lib/auth";
-
-import prisma from "@/lib/prisma";
-import { hashPassword } from "@/features/auth/utils";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,11 +22,12 @@ export async function POST(request: NextRequest) {
       return ApiResponse.error("Name is required", 400);
     }
 
-    if (!email && !mobile) {
-      return ApiResponse.error(
-        "Email or mobile is required",
-        400
-      );
+    if (!email) {
+      return ApiResponse.error("Email is required", 400);
+    }
+
+    if (!mobile) {
+      return ApiResponse.error("Mobile is required", 400);
     }
 
     if (rawPassword.length < 6) {
@@ -41,45 +37,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await prisma.user.findFirst({
-      where: email
-        ? { email }
-        : { mobile },
-    });
-
-    if (existing) {
-      return ApiResponse.error(
-        "Account already exists with provided details",
-        409
-      );
+    let userCredential;
+    try {
+      userCredential = await createUserWithEmailAndPassword(auth, email, rawPassword);
+    } catch (error: any) {
+      if (error.code === "auth/email-already-in-use") {
+        return ApiResponse.error("Account already exists", 409);
+      }
+      return ApiResponse.error("Registration failed", 500);
     }
 
-    const password = await hashPassword(rawPassword);
-
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        mobile,
-        password,
-      },
-    });
+    const user = userCredential.user;
+    const uid = user.uid;
 
     const payload = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      mobile: user.mobile,
+      id: uid,
+      name,
+      email,
+      mobile,
       role: "USER" as const,
     };
 
-    const accessToken = signAccessToken(payload);
-    const refreshToken = signRefreshToken(payload);
+    await setDoc(doc(db, "users", uid), {
+      name,
+      email,
+      mobile,
+      role: "USER",
+      createdAt: new Date(),
+      isActive: true,
+    });
 
-    await setAuthCookies(accessToken, refreshToken);
+    const idToken = await user.getIdToken();
 
     return ApiResponse.success(
-      { user: payload, accessToken },
+      { user: payload, accessToken: idToken },
       "Account created successfully",
       201
     );
