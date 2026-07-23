@@ -53,93 +53,51 @@ const ProductsPage = () => {
     try {
       const { images, variants, ...productData } = data;
 
+      let processedImages = images || [];
+
+      const fileImages = images?.filter(
+        (img: unknown) => img instanceof File
+      ) as unknown as File[] || [];
+
+      if (fileImages.length > 0) {
+        setUploadingImages(true);
+        const uploadedResults = await Promise.all(
+          fileImages.map(async (file: File, index: number) => {
+            const result = await uploadProductImage(
+              editingProduct?.id || "temp",
+              file
+            );
+            return {
+              imageUrl: result.imageUrl,
+              altText: result.altText || file.name,
+              displayOrder: (images as any[]).findIndex(i => i === file) + index,
+            };
+          })
+        );
+        const existingImageUrls = (images as any[]).filter(
+          (img: unknown) => !(img instanceof File)
+        );
+        processedImages = [...existingImageUrls, ...uploadedResults] as any;
+        setUploadingImages(false);
+      }
+
+      const finalProductData = {
+        ...productData,
+        images: processedImages,
+      };
+
       if (editingProduct) {
         const updatedProduct = await updateMutation.mutateAsync({
           id: editingProduct.id,
-          data: productData,
+          data: finalProductData,
         });
 
         if (updatedProduct) {
-          const fileImages = images?.filter(
-            (img: unknown) => img instanceof File
-          ) as unknown as File[] || [];
-          
-          if (fileImages.length > 0) {
-            setUploadingImages(true);
-            await Promise.all(
-              fileImages.map((file: File) =>
-                uploadProductImage(editingProduct.id, file)
-              )
-            );
-            setUploadingImages(false);
-          }
-
-          if (variants && variants.length > 0) {
-            const existingIds = new Set(
-              (editingProduct.variants || []).map((v) => v.id)
-            );
-            for (const variant of variants) {
-              if (variant.id && existingIds.has(variant.id)) {
-                await updateProductVariant({
-                  id: variant.id,
-                  colorId: variant.colorId || undefined,
-                  sizeId: variant.sizeId || undefined,
-                  sku: variant.sku,
-                  barcode: variant.barcode || undefined,
-                  stock: Number(variant.stock),
-                  price: variant.price ? Number(variant.price) : undefined,
-                  isActive: variant.isActive,
-                });
-              } else {
-                await createProductVariant({
-                  productId: editingProduct.id,
-                  colorId: variant.colorId || undefined,
-                  sizeId: variant.sizeId || undefined,
-                  sku: variant.sku,
-                  barcode: variant.barcode || undefined,
-                  stock: Number(variant.stock),
-                  price: variant.price ? Number(variant.price) : undefined,
-                  isActive: variant.isActive,
-                });
-              }
-            }
-          }
-
           toast.success("Product updated successfully");
         }
       } else {
-        const createdProduct = await createMutation.mutateAsync(productData);
+        const createdProduct = await createMutation.mutateAsync(finalProductData);
         if (createdProduct) {
-          const fileImages = images?.filter(
-            (img: unknown) => img instanceof File
-          ) as unknown as File[] || [];
-          
-          if (fileImages.length > 0) {
-            setUploadingImages(true);
-            await Promise.all(
-              fileImages.map((file: File) =>
-                uploadProductImage(createdProduct.id, file)
-              )
-            );
-            setUploadingImages(false);
-          }
-
-          if (variants && variants.length > 0) {
-            const variantPromises = variants.map((variant) =>
-              createProductVariant({
-                productId: createdProduct.id,
-                colorId: variant.colorId || undefined,
-                sizeId: variant.sizeId || undefined,
-                sku: variant.sku,
-                barcode: variant.barcode || undefined,
-                stock: Number(variant.stock),
-                price: variant.price ? Number(variant.price) : undefined,
-                isActive: variant.isActive,
-              })
-            );
-            await Promise.all(variantPromises);
-          }
-
           toast.success("Product created successfully");
           setEditingProduct(null);
         }

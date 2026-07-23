@@ -18,6 +18,15 @@ import { generateSlug } from "@/utils";
 import { generateSku, calculateSellingPrice } from "../utils";
 import MultiSelect from "@/components/common/MultiSelect";
 import { Product } from "../types/product";
+import { uploadProductImage } from "../api";
+
+interface ImageFile {
+  file: File;
+  preview: string;
+  status: "uploading" | "uploaded" | "error";
+  id?: string;
+  imageUrl?: string;
+}
 
 interface Option {
   id: string;
@@ -174,8 +183,7 @@ const ProductForm = ({
 
   const isEditing = !!editingProduct;
 
-  const imageUrl = (img: unknown): string => {
-    if (img instanceof File) return URL.createObjectURL(img);
+const imageUrl = (img: unknown): string => {
     if (typeof img === "string") return img;
     if (img && typeof img === "object" && "imageUrl" in (img as Record<string, unknown>))
       return (img as Record<string, string>).imageUrl;

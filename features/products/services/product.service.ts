@@ -79,7 +79,7 @@ export class ProductService {
   }
 
   static async create(
-    data: ProductFormData
+    data: ProductFormData & { images?: Array<{ imageUrl: string; altText?: string; displayOrder?: number }> }
   ) {
     const exists =
       await prisma.product.findFirst({
@@ -101,7 +101,7 @@ export class ProductService {
       );
     }
 
-    return prisma.product.create({
+    const product = await prisma.product.create({
       data: {
         name: data.name,
         slug: data.slug,
@@ -162,6 +162,18 @@ export class ProductService {
               })
             ) ?? [],
         },
+
+        images: {
+          create: (data.images || [])
+            .filter((img): img is { imageUrl: string; altText?: string; displayOrder?: number } => 
+              typeof img !== "string" && "imageUrl" in img
+            )
+            .map((img, index) => ({
+              imageUrl: img.imageUrl,
+              altText: img.altText || null,
+              displayOrder: img.displayOrder ?? index,
+            })),
+        },
       },
       include: {
         category: true,
@@ -178,6 +190,8 @@ export class ProductService {
         },
       },
     });
+
+    return product;
   }
 
   static async update(
