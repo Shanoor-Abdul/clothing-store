@@ -171,6 +171,11 @@ export class ProductService {
             collection: true,
           },
         },
+        images: {
+          orderBy: {
+            displayOrder: "asc",
+          },
+        },
       },
     });
   }
@@ -201,6 +206,12 @@ export class ProductService {
         "Product already exists."
       );
     }
+
+    await prisma.productImage.deleteMany({
+      where: {
+        productId: id,
+      },
+    });
 
     await prisma.productCollection.deleteMany({
       where: {
@@ -281,6 +292,11 @@ export class ProductService {
         collections: {
           include: {
             collection: true,
+          },
+        },
+        images: {
+          orderBy: {
+            displayOrder: "asc",
           },
         },
       },
