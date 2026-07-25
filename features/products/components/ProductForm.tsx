@@ -136,9 +136,23 @@ const ProductForm = ({
       if (!files || files.length === 0) return;
 
       const currentImages = watch("images") || [];
-      const newFiles = Array.from(files);
-      setValue("images", [...currentImages, ...newFiles], {
-        shouldDirty: true,
+      const filesArray = Array.from(files);
+      
+      filesArray.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          const newImage = {
+            file,
+            imageUrl: dataUrl,
+            altText: file.name,
+            displayOrder: (currentImages as any[]).filter(i => !(i instanceof File)).length + 1,
+          };
+          setValue("images", [...currentImages, newImage], {
+            shouldDirty: true,
+          });
+        };
+        reader.readAsDataURL(file);
       });
 
       // Reset input

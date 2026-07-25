@@ -20,7 +20,6 @@ import {
   deleteProductImage,
   deleteProductVariant,
   updateProductVariant,
-  uploadProductImage,
 } from "@/features/products/api";
 import { Product, ProductVariant } from "@/features/products/types/product";
 import { ProductFormData } from "@/features/products/validation/product.schema";
@@ -47,39 +46,32 @@ const ProductsPage = () => {
 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
-  const [uploadingImages, setUploadingImages] = useState(false);
 
   const handleSubmit = async (data: ProductFormData) => {
     try {
       const { images, variants, ...productData } = data;
 
-      let processedImages = images || [];
-
-      const fileImages = images?.filter(
-        (img: unknown) => img instanceof File
-      ) as unknown as File[] || [];
-
-      if (fileImages.length > 0) {
-        setUploadingImages(true);
-        const uploadedResults = await Promise.all(
-          fileImages.map(async (file: File, index: number) => {
-            const result = await uploadProductImage(
-              editingProduct?.id || "temp",
-              file
-            );
-            return {
-              imageUrl: result.imageUrl,
-              altText: result.altText || file.name,
-              displayOrder: (images as any[]).findIndex(i => i === file) + index,
-            };
-          })
-        );
-        const existingImageUrls = (images as any[]).filter(
-          (img: unknown) => !(img instanceof File)
-        );
-        processedImages = [...existingImageUrls, ...uploadedResults] as any;
-        setUploadingImages(false);
-      }
+      const processedImages = (images || []).map((img: any, index: number) => {
+        if (img instanceof File) {
+          return {
+            imageUrl: URL.createObjectURL(img),
+            altText: img.name,
+            displayOrder: index,
+          };
+        }
+        if (typeof img === "object" && img.imageUrl) {
+          return {
+            imageUrl: img.imageUrl,
+            altText: img.altText,
+            displayOrder: img.displayOrder || index,
+          };
+        }
+        return {
+          imageUrl: "",
+          altText: "",
+          displayOrder: index,
+        };
+      });
 
       const finalProductData = {
         ...productData,
@@ -136,9 +128,8 @@ const ProductsPage = () => {
           editingProduct ? mapProductToForm(editingProduct) : PRODUCT_DEFAULT_VALUES
         }
         loading={
-          createMutation.isPending || updateMutation.isPending || uploadingImages
+          createMutation.isPending || updateMutation.isPending
         }
-        uploading={uploadingImages}
         categories={categories}
         brands={brands}
         colors={colors}
