@@ -38,6 +38,38 @@ export async function GET() {
       ? Number(totalRevenue._sum.total)
       : 0;
 
+    const formattedRecentOrders = recentOrders.map((order) => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      userId: order.userId,
+      user: order.user ? { name: order.user.name, email: order.user.email } : null,
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+      subtotal: Number(order.subtotal || 0),
+      shipping: Number(order.shipping || 0),
+      total: Number(order.total || 0),
+      createdAt: order.createdAt,
+      items: order.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.productName,
+        variantId: item.variantId,
+        color: item.color,
+        size: item.size,
+        quantity: item.quantity,
+        price: Number(item.price || 0),
+      })),
+    }));
+
+    const formattedOrdersByStatus = ordersByStatus.reduce(
+      (acc: Record<string, number>, curr) => {
+        acc[curr.status] = curr._count.id;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
     return NextResponse.json({
       success: true,
       data: {
@@ -48,20 +80,17 @@ export async function GET() {
           totalCustomers,
           totalRevenue: formattedRevenue,
         },
-        recentOrders,
-        ordersByStatus: ordersByStatus.reduce(
-          (acc: Record<string, number>, curr: { status: string; _count: { id: number } }) => {
-            acc[curr.status] = curr._count.id;
-            return acc;
-          },
-          {} as Record<string, number>
-        ),
+        recentOrders: formattedRecentOrders,
+        ordersByStatus: formattedOrdersByStatus,
       },
     });
-  } catch (error) {
-    console.error("Dashboard API error:", error);
+  } catch (error: any) {
+    console.error("Dashboard API Detailed Error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to fetch dashboard data" },
+      {
+        success: false,
+        message: error?.message || "Failed to fetch dashboard data",
+      },
       { status: 500 }
     );
   }
