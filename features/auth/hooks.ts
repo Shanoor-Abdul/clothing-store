@@ -42,6 +42,9 @@ export const useUserLogin = () => {
     mutationFn: (data: UserLoginFormData) =>
       userLogin(data),
     onSuccess: (res) => {
+      if (res.accessToken) {
+        localStorage.setItem("token", res.accessToken);
+      }
       dispatch(setAuth({ user: res.user }));
     },
   });
@@ -54,6 +57,9 @@ export const useUserRegister = () => {
     mutationFn: (data: UserRegisterFormData) =>
       userRegister(data),
     onSuccess: (res) => {
+      if (res.accessToken) {
+        localStorage.setItem("token", res.accessToken);
+      }
       dispatch(setAuth({ user: res.user }));
     },
   });

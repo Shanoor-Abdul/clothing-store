@@ -14,6 +14,13 @@ export async function POST(request: NextRequest) {
       displayOrder,
     } = body;
 
+    if (!productId || !imageUrl) {
+      return ApiResponse.error(
+        "Product ID and Image URL are required",
+        400
+      );
+    }
+
     const image = await prisma.productImage.create({
       data: {
         productId,
@@ -28,11 +35,21 @@ export async function POST(request: NextRequest) {
       "Product image uploaded successfully",
       201
     );
-  } catch (error) {
-    console.error(error);
-
+  } catch (error: any) {
+    console.error("Image upload error:", error);
+    console.error("Error message:", error?.message);
+    console.error("Error code:", error?.code);
+    
+    if (error.code === "P2003") {
+      return ApiResponse.error(
+        "Product not found or image already exists",
+        400
+      );
+    }
+    
     return ApiResponse.error(
-      "Failed to upload image"
+      error.message || "Failed to upload image",
+      500
     );
   }
 }

@@ -3,33 +3,54 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, ShoppingCart, User, LogOut, Heart } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 import { useCart } from "@/features/cart/hooks";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { useLogout } from "@/features/auth/hooks";
 import { clearAuth } from "@/features/auth/slice";
+import useDebounce from "@/hooks/useDebounce";
 
 const StoreHeader = () => {
   const router = useRouter();
   const { totalItems } = useCart();
   const dispatch = useAppDispatch();
   const logout = useLogout();
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const isAuthenticated = useAppSelector(
     (state) => state.auth.isAuthenticated
   );
 
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const value = new FormData(e.currentTarget)
-      .get("search")
-      ?.toString()
-      .trim();
+  const [searchValue, setSearchValue] = useState("");
 
-    if (value) {
-      router.push(`/products?search=${encodeURIComponent(value)}`);
+  const debouncedSearch = useDebounce(searchValue, 500);
+
+  const performSearch = useCallback(
+    (value: string) => {
+      const trimmed = value.trim();
+      if (trimmed) {
+        router.push(`/products?search=${encodeURIComponent(trimmed)}`);
+      }
+    },
+    [router]
+  );
+
+  // Auto-search on debounced value change
+  useEffect(() => {
+    if (debouncedSearch.trim()) {
+      performSearch(debouncedSearch);
     }
-  };
+  }, [debouncedSearch, performSearch]);
+
+  const handleSearchSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      performSearch(searchValue);
+      searchRef.current?.blur();
+    },
+    [searchValue, performSearch]
+  );
 
   const handleLogout = async () => {
     try {
@@ -51,14 +72,17 @@ const StoreHeader = () => {
         </Link>
 
         <form
-          onSubmit={handleSearch}
+          onSubmit={handleSearchSubmit}
           className="hidden flex-1 md:flex"
         >
           <div className="relative w-full max-w-xl">
             <Search className="absolute left-3 top-3 text-slate-400" size={18} />
             <input
+              ref={searchRef}
               name="search"
               type="text"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
               placeholder="Search products..."
               className="w-full rounded-full border border-slate-200 bg-white/95 py-3 pl-11 pr-4 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200"
             />

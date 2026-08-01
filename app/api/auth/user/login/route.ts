@@ -1,28 +1,22 @@
 import { NextRequest } from "next/server";
 
 import { ApiResponse } from "@/lib/api-response";
-import {
-  clearAuthCookies,
-  getCurrentUser,
-  setAuthCookies,
-  signAccessToken,
-  signRefreshToken,
-} from "@/lib/auth";
-
-import prisma from "@/lib/prisma";
-import { comparePassword, hashPassword } from "@/features/auth/utils";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 
 const mapUser = (user: {
   id: string;
   name: string;
   email: string | null;
   mobile: string | null;
+  role: string;
 }) => ({
   id: user.id,
   name: user.name,
   email: user.email,
   mobile: user.mobile,
-  role: "USER" as const,
+  role: user.role as "USER" | "ADMIN",
 });
 
 export async function POST(request: NextRequest) {
@@ -32,52 +26,43 @@ export async function POST(request: NextRequest) {
     const email = body.email
       ? String(body.email).trim().toLowerCase()
       : null;
-    const mobile = body.mobile
-      ? String(body.mobile).trim()
-      : null;
     const password = String(body.password ?? "");
 
-    if ((!email && !mobile) || !password) {
+    if (!email || !password) {
       return ApiResponse.error(
-        "Email or mobile and password are required",
+        "Email and password are required",
         400
       );
     }
 
-    const user = await prisma.user.findFirst({
-      where: email
-        ? { email }
-        : { mobile },
-    });
-
-    if (!user || !user.isActive) {
-      return ApiResponse.error(
-        "Invalid credentials",
-        401
-      );
+    let userCredential;
+    try {
+      userCredential = await signInWithEmailAndPassword(auth, email, password);
+    } catch (error: any) {
+      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
+        return ApiResponse.error("Invalid credentials", 401);
+      }
+      return ApiResponse.error("Login failed", 500);
     }
 
-    const valid = await comparePassword(
-      password,
-      user.password
-    );
+    const user = userCredential.user;
+    const uid = user.uid;
 
-    if (!valid) {
-      return ApiResponse.error(
-        "Invalid credentials",
-        401
-      );
-    }
+    const userDoc = await getDoc(doc(db, "users", uid));
+    const userData = userDoc.data() || {};
 
-    const payload = mapUser(user);
+    const payload = {
+      id: uid,
+      name: userData.name || user.displayName || "",
+      email: userData.email || email,
+      mobile: userData.mobile || null,
+      role: (userData.role || "USER") as "USER" | "ADMIN",
+    };
 
-    const accessToken = signAccessToken(payload);
-    const refreshToken = signRefreshToken(payload);
-
-    await setAuthCookies(accessToken, refreshToken);
+    const idToken = await user.getIdToken();
 
     return ApiResponse.success(
-      { user: payload, accessToken },
+      { user: payload, accessToken: idToken },
       "Logged in successfully"
     );
   } catch (error) {
@@ -87,18 +72,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  const user = await getCurrentUser();
-
-  if (!user || user.role !== "USER") {
-    return ApiResponse.error("Unauthorized", 401);
-  }
-
-  return ApiResponse.success({ user }, "Authorized");
-}
-
-export async function DELETE() {
-  clearAuthCookies();
-
+export async function DELETE(request: NextRequest) {
   return ApiResponse.success(null, "Logged out");
 }

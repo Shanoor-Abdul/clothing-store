@@ -25,6 +25,12 @@ export async function GET(
       },
       include: {
         category: true,
+        subcategory: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         brand: true,
         images: {
           orderBy: { displayOrder: "asc" },

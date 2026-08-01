@@ -7,6 +7,7 @@ export class ProductService {
     return prisma.product.findMany({
       include: {
         category: true,
+        subcategory: true,
         brand: true,
         images: {
           orderBy: {
@@ -40,6 +41,7 @@ export class ProductService {
       },
       include: {
         category: true,
+        subcategory: true,
         brand: true,
         images: {
           orderBy: {
@@ -60,6 +62,7 @@ export class ProductService {
       },
       include: {
         category: true,
+        subcategory: true,
         brand: true,
         images: true,
         videos: true,
@@ -79,7 +82,7 @@ export class ProductService {
   }
 
   static async create(
-    data: ProductFormData
+    data: ProductFormData & { images?: Array<{ imageUrl: string; altText?: string; displayOrder?: number }> }
   ) {
     const exists =
       await prisma.product.findFirst({
@@ -101,7 +104,7 @@ export class ProductService {
       );
     }
 
-    return prisma.product.create({
+    const product = await prisma.product.create({
       data: {
         name: data.name,
         slug: data.slug,
@@ -140,6 +143,14 @@ export class ProductService {
           },
         },
 
+        subcategory: data.subcategoryId
+          ? {
+              connect: {
+                id: data.subcategoryId,
+              },
+            }
+          : undefined,
+
         brand: data.brandId
           ? {
               connect: {
@@ -162,17 +173,55 @@ export class ProductService {
               })
             ) ?? [],
         },
+
+        images: {
+          create: (data.images || [])
+            .filter((img): img is { imageUrl: string; altText?: string; displayOrder?: number } => 
+              typeof img !== "string" && "imageUrl" in img
+            )
+            .map((img, index) => ({
+              imageUrl: img.imageUrl,
+              altText: img.altText || null,
+              displayOrder: img.displayOrder ?? index,
+            })),
+        },
+
+        variants: {
+          create: (data.variants || []).map((variant) => ({
+            sku: variant.sku,
+            barcode: variant.barcode || null,
+            stock: variant.stock,
+            price: variant.price || null,
+            isActive: variant.isActive,
+            colorId: variant.colorId,
+            sizeId: variant.sizeId,
+          })),
+        },
       },
       include: {
         category: true,
+        subcategory: true,
         brand: true,
         collections: {
           include: {
             collection: true,
           },
         },
+        images: {
+          orderBy: {
+            displayOrder: "asc",
+          },
+        },
+        variants: {
+          include: {
+            color: true,
+            size: true,
+          },
+        },
       },
     });
+
+    return product;
   }
 
   static async update(
@@ -201,6 +250,12 @@ export class ProductService {
         "Product already exists."
       );
     }
+
+    await prisma.productImage.deleteMany({
+      where: {
+        productId: id,
+      },
+    });
 
     await prisma.productCollection.deleteMany({
       where: {
@@ -250,6 +305,16 @@ export class ProductService {
           },
         },
 
+        subcategory: data.subcategoryId
+          ? {
+              connect: {
+                id: data.subcategoryId,
+              },
+            }
+          : {
+              disconnect: true,
+            },
+
         brand: data.brandId
           ? {
               connect: {
@@ -274,13 +339,38 @@ export class ProductService {
               })
             ) ?? [],
         },
+
+        variants: {
+          deleteMany: {},
+          create: (data.variants || []).map((variant) => ({
+            sku: variant.sku,
+            barcode: variant.barcode || null,
+            stock: variant.stock,
+            price: variant.price || null,
+            isActive: variant.isActive,
+            colorId: variant.colorId,
+            sizeId: variant.sizeId,
+          })),
+        },
       },
       include: {
         category: true,
+        subcategory: true,
         brand: true,
         collections: {
           include: {
             collection: true,
+          },
+        },
+        images: {
+          orderBy: {
+            displayOrder: "asc",
+          },
+        },
+        variants: {
+          include: {
+            color: true,
+            size: true,
           },
         },
       },

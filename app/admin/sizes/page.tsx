@@ -26,9 +26,7 @@ const SizesPage = () => {
   const deleteMutation = useDeleteSize();
 
   const [editingSize, setEditingSize] = useState<Size | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Size | null>(
-    null
-  );
+  const [deleteTarget, setDeleteTarget] = useState<Size | null>(null);
 
   const handleSubmit = async (data: SizeFormData) => {
     try {
@@ -62,7 +60,9 @@ const SizesPage = () => {
         <h1 className="text-3xl font-bold text-slate-900">
           Size Management
         </h1>
-        <p className="mt-2 text-slate-500">Manage product sizes.</p>
+        <p className="mt-2 text-slate-500">
+          Manage product sizes (S, M, L, XL, etc.).
+        </p>
       </div>
 
       <SizeForm

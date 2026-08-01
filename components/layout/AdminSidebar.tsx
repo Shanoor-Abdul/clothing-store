@@ -39,11 +39,6 @@ const menuItems = [
     icon: Tags,
   },
   {
-    title: "Products",
-    href: "/admin/products",
-    icon: Package,
-  },
-  {
     title: "Colors",
     href: "/admin/colors",
     icon: Palette,
@@ -52,6 +47,11 @@ const menuItems = [
     title: "Sizes",
     href: "/admin/sizes",
     icon: Ruler,
+  },
+  {
+    title: "Products",
+    href: "/admin/products",
+    icon: Package,
   },
   {
     title: "Banners",

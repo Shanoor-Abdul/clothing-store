@@ -12,6 +12,11 @@ export const CategorySchema = z.object({
   isActive: z.boolean(),
 });
 
+export const CategoryFormSchema = CategorySchema.refine(
+  (data) => !data.parentId || data.parentId.trim().length > 0,
+  { message: "Parent category is required if selected" }
+);
+
 export interface CategoryFormData {
   name: string;
   slug: string;
