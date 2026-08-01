@@ -49,10 +49,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const valid = await comparePassword(
-      password,
-      admin.password
-    );
+    let valid = false;
+    try {
+      valid = await comparePassword(password, admin.password);
+    } catch {
+      valid = false;
+    }
+
+    // Support plain text fallback for initial seed admins
+    if (!valid && password === admin.password) {
+      valid = true;
+    }
 
     if (!valid) {
       return ApiResponse.error(
@@ -72,10 +79,10 @@ export async function POST(request: NextRequest) {
       { user: payload, accessToken },
       "Admin logged in successfully"
     );
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    console.error("Admin Login Route Error:", error);
 
-    return ApiResponse.error("Login failed", 500);
+    return ApiResponse.error(error?.message || "Login failed", 500);
   }
 }
 
