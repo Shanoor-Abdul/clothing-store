@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { ArrowRight, ShoppingCart, ChevronLeft, ChevronRight, Layers, Tag, ShieldCheck, Truck } from "lucide-react";
+import { ArrowRight, ShoppingCart, ChevronLeft, ChevronRight, Layers, Tag, ShieldCheck, Truck, Sparkles } from "lucide-react";
 import { useMemo, useState, useCallback, useEffect } from "react";
 
 import api from "@/lib/axios";
@@ -322,7 +322,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* 3. Shop by Category Grid */}
+      {/* 3. Shop by Category Grid with Automatic Product Image Fallback */}
       {activeCategories.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
@@ -336,34 +336,46 @@ const HomePage = () => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {activeCategories.slice(0, 8).map((category: Category) => (
-              <Link
-                key={category.id}
-                href={`/products?category=${category.id}`}
-                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-              >
-                <div className="aspect-square w-full overflow-hidden rounded-lg bg-slate-100">
-                  {category.image ? (
-                    <img
-                      src={category.image}
-                      alt={category.name}
-                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-xs font-semibold text-slate-400">
+            {activeCategories.slice(0, 8).map((category: Category) => {
+              const matchedProduct = products.find(
+                (p) => p.categoryId === category.id || p.category?.id === category.id
+              );
+              const categoryImage =
+                category.image ||
+                matchedProduct?.images?.[0]?.imageUrl ||
+                matchedProduct?.imageUrl;
+
+              return (
+                <Link
+                  key={category.id}
+                  href={`/products?category=${category.id}`}
+                  className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                >
+                  <div className="aspect-square w-full overflow-hidden rounded-lg bg-slate-100">
+                    {categoryImage ? (
+                      <img
+                        src={categoryImage}
+                        alt={category.name}
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center bg-gradient-to-br from-blue-900 to-slate-900 p-4 text-center text-white">
+                        <Sparkles size={24} className="text-sky-400 mb-1" />
+                        <span className="text-sm font-bold">{category.name}</span>
+                        <span className="text-[10px] text-slate-300">Department</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-3 text-center">
+                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition">
                       {category.name}
-                    </div>
-                  )}
-                </div>
-                <div className="mt-3 text-center">
-                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition">
-                    {category.name}
-                  </h3>
-                  <span className="text-[11px] font-semibold text-blue-600">Shop Department &rarr;</span>
-                </div>
-              </Link>
-            ))}
+                    </h3>
+                    <span className="text-[11px] font-semibold text-blue-600">Shop Department &rarr;</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}
