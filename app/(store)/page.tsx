@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { ArrowRight, ShoppingCart } from "lucide-react";
-import { useMemo, useState, useCallback } from "react";
+import { ArrowRight, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 
 import api from "@/lib/axios";
 import { useCart } from "@/features/cart/hooks";
@@ -73,6 +73,7 @@ const fetchCategories = async (): Promise<Category[]> => {
 const HomePage = () => {
   const { add } = useCart();
   const [activeCategory, setActiveCategory] = useState<string>("");
+  const [currentBannerIndex, setCurrentBannerIndex] = useState<number>(0);
 
   const { data: banners = [] } = useQuery<Banner[]>({
     queryKey: ["banners"],
@@ -111,7 +112,26 @@ const HomePage = () => {
     );
   }, [activeCategory, products]);
 
-  const hero = banners[0];
+  // Banner Carousel Auto-play logic
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [banners.length]);
+
+  const handleNextBanner = () => {
+    if (banners.length === 0) return;
+    setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
+  };
+
+  const handlePrevBanner = () => {
+    if (banners.length === 0) return;
+    setCurrentBannerIndex((prev) => (prev - 1 + banners.length) % banners.length);
+  };
+
+  const activeBanner = banners[currentBannerIndex] || banners[0];
 
   const handleAddToCart = useCallback(
     (product: Product) => {
@@ -140,6 +160,7 @@ const HomePage = () => {
 
   return (
     <div className="mx-auto max-w-7xl space-y-12 px-4 py-8">
+      {/* Top Hero Section */}
       <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="rounded-[2rem] bg-blue-950 px-8 py-10 text-white shadow-lg shadow-blue-100/10 sm:px-12 sm:py-14">
           <div className="max-w-xl space-y-6">
@@ -213,41 +234,81 @@ const HomePage = () => {
         </div>
       </section>
 
-      {hero && (
-        <section className="overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-lg shadow-slate-900/20">
-          <div className="relative min-h-[300px] sm:min-h-[360px]">
-            <img
-              src={hero.imageUrl}
-              alt={hero.title}
-              className="h-full w-full object-cover opacity-80"
-              loading="lazy"
-            />
-            <div className="absolute inset-0 bg-slate-950/60 p-8 sm:p-12">
-              <div className="max-w-2xl space-y-4">
+      {/* Multi-Banner Hero Carousel Section */}
+      {banners.length > 0 && activeBanner && (
+        <section className="relative h-[360px] sm:h-[420px] md:h-[460px] w-full overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl shadow-slate-900/10">
+          <img
+            src={activeBanner.imageUrl}
+            alt={activeBanner.title}
+            className="h-full w-full object-cover opacity-75 transition-opacity duration-700"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/40 to-transparent p-8 sm:p-14 flex items-center">
+            <div className="max-w-2xl space-y-4">
+              {activeBanner.subtitle && (
                 <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs uppercase tracking-[0.25em] text-slate-200">
-                  {hero.subtitle || "Limited edit"}
+                  {activeBanner.subtitle}
                 </span>
-                <h2 className="text-3xl font-bold sm:text-5xl">
-                  {hero.title}
-                </h2>
+              )}
+              <h2 className="text-3xl font-bold sm:text-5xl drop-shadow-md">
+                {activeBanner.title}
+              </h2>
+              {activeBanner.description && (
                 <p className="max-w-xl text-sm text-slate-200 sm:text-base">
-                  {hero.description || "Shop our latest launch with bold styles and premium comfort."}
+                  {activeBanner.description}
                 </p>
-                {hero.buttonText && (
-                  <Link
-                    href={hero.redirectUrl || "/products"}
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
-                  >
-                    {hero.buttonText}
-                    <ShoppingCart size={16} />
-                  </Link>
-                )}
-              </div>
+              )}
+              {activeBanner.buttonText && (
+                <Link
+                  href={activeBanner.redirectUrl || "/products"}
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100 hover:scale-105"
+                >
+                  {activeBanner.buttonText}
+                  <ShoppingCart size={16} />
+                </Link>
+              )}
             </div>
           </div>
+
+          {/* Banner Slider Controls */}
+          {banners.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrevBanner}
+                className="absolute left-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/60 text-white backdrop-blur hover:bg-slate-900 transition"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                type="button"
+                onClick={handleNextBanner}
+                className="absolute right-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/60 text-white backdrop-blur hover:bg-slate-900 transition"
+              >
+                <ChevronRight size={20} />
+              </button>
+
+              {/* Slider Dots */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                {banners.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCurrentBannerIndex(idx)}
+                    className={`h-2.5 rounded-full transition-all ${
+                      currentBannerIndex === idx
+                        ? "w-8 bg-white"
+                        : "w-2.5 bg-white/40 hover:bg-white/70"
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </section>
       )}
 
+      {/* Products Section */}
       <section className="space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -310,6 +371,7 @@ const HomePage = () => {
         )}
       </section>
 
+      {/* Featured Picks */}
       <section className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -340,6 +402,7 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* Footer Hero Banner */}
       <section className="rounded-[2rem] bg-slate-950 px-8 py-10 text-white shadow-lg shadow-slate-900/10 sm:px-12 sm:py-14">
         <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-center">
           <div>

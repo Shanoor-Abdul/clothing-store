@@ -11,8 +11,8 @@ export async function GET() {
       recentOrders,
       ordersByStatus,
     ] = await Promise.all([
-      prisma.product.count({ where: { deletedAt: null } }),
-      prisma.category.count({ where: { deletedAt: null } }),
+      prisma.product.count({ where: { isActive: true } }),
+      prisma.category.count({ where: { isActive: true } }),
       prisma.order.count(),
       prisma.user.count({ where: { isActive: true } }),
       prisma.order.findMany({
@@ -34,6 +34,10 @@ export async function GET() {
       where: { paymentStatus: "PAID" },
     });
 
+    const formattedRevenue = totalRevenue._sum.total
+      ? Number(totalRevenue._sum.total)
+      : 0;
+
     return NextResponse.json({
       success: true,
       data: {
@@ -42,7 +46,7 @@ export async function GET() {
           totalCategories,
           totalOrders,
           totalCustomers,
-          totalRevenue: totalRevenue._sum.total ?? 0,
+          totalRevenue: formattedRevenue,
         },
         recentOrders,
         ordersByStatus: ordersByStatus.reduce(
