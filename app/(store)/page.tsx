@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { ArrowRight, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, ShoppingCart, ChevronLeft, ChevronRight, Layers, Tag, ShieldCheck, Truck } from "lucide-react";
 import { useMemo, useState, useCallback, useEffect } from "react";
 
 import api from "@/lib/axios";
@@ -33,6 +33,15 @@ interface Category {
   isActive: boolean;
 }
 
+interface Collection {
+  id: string;
+  name: string;
+  slug: string;
+  image?: string | null;
+  description?: string | null;
+  isActive: boolean;
+}
+
 interface ProductVariant {
   id: string;
   stock: number;
@@ -51,7 +60,7 @@ interface Product {
   images?: { imageUrl: string }[];
   variants?: ProductVariant[];
   categoryId: string;
-  category?: { id: string } | null;
+  category?: { id: string; name?: string } | null;
   isFeatured?: boolean;
 }
 
@@ -67,6 +76,11 @@ const fetchProducts = async (url: string): Promise<Product[]> => {
 
 const fetchCategories = async (): Promise<Category[]> => {
   const { data } = await api.get<ApiResponse<Category[]>>("/categories");
+  return data.data;
+};
+
+const fetchCollections = async (): Promise<Collection[]> => {
+  const { data } = await api.get<ApiResponse<Collection[]>>("/collections");
   return data.data;
 };
 
@@ -93,9 +107,20 @@ const HomePage = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: collections = [] } = useQuery<Collection[]>({
+    queryKey: ["collections", "home"],
+    queryFn: fetchCollections,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const activeCategories = useMemo(
     () => categories.filter((category) => category.isActive),
     [categories]
+  );
+
+  const activeCollections = useMemo(
+    () => collections.filter((collection) => collection.isActive),
+    [collections]
   );
 
   const featuredProducts = useMemo(
@@ -117,7 +142,7 @@ const HomePage = () => {
     if (banners.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
-    }, 6000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [banners.length]);
 
@@ -159,109 +184,35 @@ const HomePage = () => {
   );
 
   return (
-    <div className="mx-auto max-w-7xl space-y-12 px-4 py-8">
-      {/* Top Hero Section */}
-      <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-[2rem] bg-blue-950 px-8 py-10 text-white shadow-lg shadow-blue-100/10 sm:px-12 sm:py-14">
-          <div className="max-w-xl space-y-6">
-            <span className="inline-flex rounded-full bg-blue-600 px-4 py-1 text-xs uppercase tracking-[0.25em] text-slate-100">
-              New arrivals
-            </span>
-            <h1 className="text-4xl font-bold leading-tight md:text-5xl">
-              Elevate your everyday style with modern clothing essentials.
-            </h1>
-            <p className="max-w-xl text-sm text-slate-200 sm:text-base">
-              Discover handpicked outfits, fresh drops, and effortless looks built to keep your closet feeling new.
-            </p>
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/products"
-                className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-blue-950 transition hover:bg-slate-100"
-              >
-                Browse Collection
-              </Link>
-              <Link
-                href="/products?featured=true"
-                className="inline-flex items-center justify-center rounded-full border border-blue-300 bg-transparent px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-600/80"
-              >
-                Shop Featured
-              </Link>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-3xl bg-slate-900/70 p-4">
-                <p className="text-sm text-slate-300">Fast shipping</p>
-                <p className="mt-2 text-xl font-semibold">Delivered in 3–5 days</p>
-              </div>
-              <div className="rounded-3xl bg-slate-900/70 p-4">
-                <p className="text-sm text-slate-300">Satisfaction</p>
-                <p className="mt-2 text-xl font-semibold">Easy returns within 30 days</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-4">
-          {activeCategories.slice(0, 4).map((category: Category) => (
-            <Link
-              key={category.id}
-              href={`/products?category=${category.id}`}
-              className="group overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-2xl"
-            >
-              {category.image ? (
-                <img
-                  src={category.image}
-                  alt={category.name}
-                  className="h-40 w-full object-cover transition duration-500 group-hover:scale-105"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="flex h-40 items-center justify-center bg-slate-100 text-slate-500">
-                  No Image
-                </div>
-              )}
-              <div className="space-y-1 p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                  Shop
-                </p>
-                <h2 className="text-lg font-semibold text-slate-900">
-                  {category.name}
-                </h2>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Multi-Banner Hero Carousel Section */}
-      {banners.length > 0 && activeBanner && (
-        <section className="relative h-[360px] sm:h-[420px] md:h-[460px] w-full overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl shadow-slate-900/10">
+    <div className="mx-auto max-w-7xl space-y-10 px-4 py-6">
+      {/* 1. Main Hero Banner Carousel */}
+      {banners.length > 0 && activeBanner ? (
+        <section className="relative h-[280px] sm:h-[340px] md:h-[400px] w-full overflow-hidden rounded-2xl bg-slate-950 text-white shadow-lg">
           <img
             src={activeBanner.imageUrl}
             alt={activeBanner.title}
-            className="h-full w-full object-cover opacity-75 transition-opacity duration-700"
+            className="h-full w-full object-cover opacity-80 transition-opacity duration-500"
             loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/40 to-transparent p-8 sm:p-14 flex items-center">
-            <div className="max-w-2xl space-y-4">
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/40 to-transparent p-6 sm:p-12 flex items-center">
+            <div className="max-w-xl space-y-3 sm:space-y-4">
               {activeBanner.subtitle && (
-                <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs uppercase tracking-[0.25em] text-slate-200">
+                <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-[11px] font-bold uppercase tracking-widest text-blue-200 backdrop-blur-sm">
                   {activeBanner.subtitle}
                 </span>
               )}
-              <h2 className="text-3xl font-bold sm:text-5xl drop-shadow-md">
+              <h1 className="text-2xl font-extrabold leading-tight sm:text-4xl md:text-5xl drop-shadow-md">
                 {activeBanner.title}
-              </h2>
+              </h1>
               {activeBanner.description && (
-                <p className="max-w-xl text-sm text-slate-200 sm:text-base">
+                <p className="max-w-md text-xs text-slate-200 sm:text-sm line-clamp-2">
                   {activeBanner.description}
                 </p>
               )}
               {activeBanner.buttonText && (
                 <Link
                   href={activeBanner.redirectUrl || "/products"}
-                  className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100 hover:scale-105"
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 hover:scale-105 sm:text-sm"
                 >
                   {activeBanner.buttonText}
                   <ShoppingCart size={16} />
@@ -270,35 +221,34 @@ const HomePage = () => {
             </div>
           </div>
 
-          {/* Banner Slider Controls */}
+          {/* Banner Controls */}
           {banners.length > 1 && (
             <>
               <button
                 type="button"
                 onClick={handlePrevBanner}
-                className="absolute left-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/60 text-white backdrop-blur hover:bg-slate-900 transition"
+                className="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/60 text-white backdrop-blur hover:bg-slate-900 transition"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={18} />
               </button>
               <button
                 type="button"
                 onClick={handleNextBanner}
-                className="absolute right-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/60 text-white backdrop-blur hover:bg-slate-900 transition"
+                className="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/60 text-white backdrop-blur hover:bg-slate-900 transition"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={18} />
               </button>
 
-              {/* Slider Dots */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2">
                 {banners.map((_, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setCurrentBannerIndex(idx)}
-                    className={`h-2.5 rounded-full transition-all ${
+                    className={`h-2 rounded-full transition-all ${
                       currentBannerIndex === idx
-                        ? "w-8 bg-white"
-                        : "w-2.5 bg-white/40 hover:bg-white/70"
+                        ? "w-7 bg-white"
+                        : "w-2 bg-white/40 hover:bg-white/70"
                     }`}
                   />
                 ))}
@@ -306,15 +256,174 @@ const HomePage = () => {
             </>
           )}
         </section>
+      ) : (
+        /* Fallback Hero Banner if no banner is defined */
+        <section className="rounded-2xl bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 p-8 sm:p-12 text-white shadow-lg">
+          <div className="max-w-xl space-y-4">
+            <span className="inline-flex rounded-full bg-blue-600 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-slate-100">
+              Welcome to ClothingStore
+            </span>
+            <h1 className="text-3xl font-extrabold sm:text-5xl">
+              Elevate Your Everyday Style
+            </h1>
+            <p className="text-sm text-slate-200">
+              Discover handpicked apparel, trendsetting drops, and luxury essentials crafted for your modern closet.
+            </p>
+            <Link
+              href="/products"
+              className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100"
+            >
+              Shop All Products <ArrowRight size={16} />
+            </Link>
+          </div>
+        </section>
       )}
 
-      {/* Products Section */}
-      <section className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      {/* 2. Top Trust Highlights Bar */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center gap-3 p-2">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <Truck size={20} />
+          </div>
           <div>
-            <h2 className="text-2xl font-bold">Discover products</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Click a category to refine the selection or add favorites to the cart instantly.
+            <p className="text-xs font-bold text-slate-900">Fast Shipping</p>
+            <p className="text-[11px] text-slate-500">Delivered in 3–5 days</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-2">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+            <ShieldCheck size={20} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-slate-900">100% Quality Guaranteed</p>
+            <p className="text-[11px] text-slate-500">Verified products & fabrics</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-2">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+            <Tag size={20} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-slate-900">Best Price Offers</p>
+            <p className="text-[11px] text-slate-500">Direct deals & discounts</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-2">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+            <Layers size={20} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-slate-900">Easy 30-Day Returns</p>
+            <p className="text-[11px] text-slate-500">Hassle-free return policy</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Shop by Category Grid */}
+      {activeCategories.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Shop by Category</h2>
+              <p className="text-xs text-slate-500 sm:text-sm">Explore our top fashion departments</p>
+            </div>
+            <Link href="/products" className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
+              View All <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {activeCategories.slice(0, 8).map((category: Category) => (
+              <Link
+                key={category.id}
+                href={`/products?category=${category.id}`}
+                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              >
+                <div className="aspect-square w-full overflow-hidden rounded-lg bg-slate-100">
+                  {category.image ? (
+                    <img
+                      src={category.image}
+                      alt={category.name}
+                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs font-semibold text-slate-400">
+                      {category.name}
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 text-center">
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition">
+                    {category.name}
+                  </h3>
+                  <span className="text-[11px] font-semibold text-blue-600">Shop Department &rarr;</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 4. Featured Collections Showcase Section */}
+      {activeCollections.length > 0 && (
+        <section className="space-y-4 rounded-2xl bg-gradient-to-br from-slate-900 to-blue-950 p-6 text-white shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-sky-400">Curated Showcases</span>
+              <h2 className="text-xl font-bold sm:text-2xl">Featured Collections</h2>
+            </div>
+            <Link href="/products" className="text-xs font-bold text-sky-400 hover:underline">
+              Explore All &rarr;
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            {activeCollections.slice(0, 3).map((collection: Collection) => (
+              <Link
+                key={collection.id}
+                href={`/products?collection=${collection.id}`}
+                className="group relative h-48 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow transition hover:border-sky-500/50"
+              >
+                {collection.image ? (
+                  <img
+                    src={collection.image}
+                    alt={collection.name}
+                    className="h-full w-full object-cover opacity-60 transition duration-500 group-hover:scale-105 group-hover:opacity-75"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-slate-800" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent p-5 flex flex-col justify-end">
+                  <span className="inline-block w-max rounded-md bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase">
+                    Collection
+                  </span>
+                  <h3 className="mt-1 text-lg font-bold text-white drop-shadow">
+                    {collection.name}
+                  </h3>
+                  {collection.description && (
+                    <p className="text-xs text-slate-300 line-clamp-1">
+                      {collection.description}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 5. Main Product Discovery Catalog */}
+      <section className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b pb-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Discover Products</h2>
+            <p className="text-xs text-slate-500">
+              Filter by category or select items to add to cart
             </p>
           </div>
 
@@ -322,23 +431,23 @@ const HomePage = () => {
             <button
               type="button"
               onClick={() => setActiveCategory("")}
-              className={`rounded-full border px-4 py-2 text-sm transition ${
+              className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
                 !activeCategory
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-slate-700 hover:bg-slate-100"
+                  ? "bg-blue-600 text-white border-blue-600 shadow"
+                  : "bg-white text-slate-700 hover:bg-slate-100 border-slate-300"
               }`}
             >
-              All
+              All Items
             </button>
             {activeCategories.slice(0, 6).map((category: Category) => (
               <button
                 key={category.id}
                 type="button"
                 onClick={() => setActiveCategory(category.id)}
-                className={`rounded-full border px-4 py-2 text-sm transition ${
+                className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition ${
                   activeCategory === category.id
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-slate-700 hover:bg-slate-100"
+                    ? "bg-blue-600 text-white border-blue-600 shadow"
+                    : "bg-white text-slate-700 hover:bg-slate-100 border-slate-300"
                 }`}
               >
                 {category.name}
@@ -354,8 +463,8 @@ const HomePage = () => {
             ))}
           </div>
         ) : displayedProducts.length === 0 ? (
-          <div className="rounded-3xl border bg-white p-10 text-center text-slate-500">
-            No products found for this category.
+          <div className="rounded-2xl border bg-white p-12 text-center text-slate-500 shadow-sm">
+            No products found for this section.
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -371,27 +480,24 @@ const HomePage = () => {
         )}
       </section>
 
-      {/* Featured Picks */}
-      <section className="space-y-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">Featured picks</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              The most-loved items from our collection, ready to add to your cart.
-            </p>
+      {/* 6. Featured Picks Section */}
+      {featuredProducts.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Featured Picks</h2>
+              <p className="text-xs text-slate-500">Handpicked items selected for you</p>
+            </div>
+            <Link
+              href="/products?featured=true"
+              className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
+            >
+              Browse Featured <ArrowRight size={14} />
+            </Link>
           </div>
-          <Link
-            href="/products?featured=true"
-            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
-          >
-            Browse featured <ArrowRight size={16} />
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {(featuredProducts.length > 0 ? featuredProducts : products)
-            .slice(0, 8)
-            .map((product: Product) => (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {featuredProducts.slice(0, 8).map((product: Product) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -399,35 +505,9 @@ const HomePage = () => {
                 onAddToCart={() => handleAddToCart(product)}
               />
             ))}
-        </div>
-      </section>
-
-      {/* Footer Hero Banner */}
-      <section className="rounded-[2rem] bg-slate-950 px-8 py-10 text-white shadow-lg shadow-slate-900/10 sm:px-12 sm:py-14">
-        <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-center">
-          <div>
-            <h2 className="text-3xl font-bold">Refresh your wardrobe effortlessly</h2>
-            <p className="mt-4 max-w-2xl text-slate-300">
-              Enjoy curated styles, quick shipping, and a shopping experience made for modern wardrobes.
-            </p>
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Link
-              href="/products"
-              className="rounded-full bg-white px-6 py-3 text-center text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
-            >
-              Shop all products
-            </Link>
-            <Link
-              href="/products?featured=true"
-              className="rounded-full border border-slate-700 bg-transparent px-6 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/10"
-            >
-              See featured picks
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 };
