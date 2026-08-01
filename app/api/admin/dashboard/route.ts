@@ -25,7 +25,12 @@ export async function GET() {
 
     const totalRevenue = await prisma.order.aggregate({
       _sum: { total: true },
-      where: { paymentStatus: "PAID" },
+      where: {
+        OR: [
+          { status: "DELIVERED" },
+          { paymentStatus: "PAID" },
+        ],
+      },
     });
 
     const formattedRevenue = totalRevenue._sum.total

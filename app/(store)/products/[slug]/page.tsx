@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Minus, Plus, ShoppingCart, Heart, ShieldCheck, Truck, RefreshCw, Zap } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Heart, ShieldCheck, Truck, RefreshCw, Zap, Star } from "lucide-react";
 import { toast } from "sonner";
 
 import api from "@/lib/axios";
@@ -24,10 +24,23 @@ interface ApiResponse<T> {
   data: T;
 }
 
+interface Review {
+  id: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  user?: { name: string; profileImage?: string | null };
+}
+
 const fetchProduct = async (slug: string) => {
   const { data } = await api.get<ApiResponse<
     Product & { relatedProducts?: Product[] }
   >>(`/products/${slug}`);
+  return data.data;
+};
+
+const fetchReviews = async (productId: string) => {
+  const { data } = await api.get<ApiResponse<Review[]>>(`/products/${productId}/reviews`);
   return data.data;
 };
 
@@ -51,6 +64,12 @@ const ProductDetailPage = () => {
     queryKey: ["product", slug],
     queryFn: () => fetchProduct(slug),
     enabled: !!slug,
+  });
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ["reviews", product?.id],
+    queryFn: () => fetchReviews(product!.id),
+    enabled: !!product?.id,
   });
 
   if (isLoading) {
@@ -102,8 +121,7 @@ const ProductDetailPage = () => {
 
   const currentVariant = selectedVariant || (selectedColorId || selectedSizeId ? filteredVariants[0] : null);
 
-  // Base price vs Variant custom price logic:
-  // If user selected a variant with custom price, use variant.price. Otherwise use base product.sellingPrice!
+  // Base price vs Variant custom price logic
   const displayPrice = (currentVariant && currentVariant.price)
     ? Number(currentVariant.price)
     : Number(product.sellingPrice);
@@ -134,7 +152,7 @@ const ProductDetailPage = () => {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 space-y-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 space-y-10">
       {/* Top Breadcrumb */}
       <nav className="text-xs text-slate-500">
         <span className="hover:underline cursor-pointer" onClick={() => router.push("/")}>Home</span> /{" "}
@@ -144,7 +162,7 @@ const ProductDetailPage = () => {
 
       {/* Main Product Layout */}
       <div className="grid gap-8 lg:grid-cols-12">
-        {/* Left Column: Image Gallery with Centered Object-Contain */}
+        {/* Left Column: Image Gallery */}
         <div className="lg:col-span-7 space-y-4">
           <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 shadow-sm flex items-center justify-center p-4">
             {image ? (
@@ -165,7 +183,7 @@ const ProductDetailPage = () => {
             ) : null}
           </div>
 
-          {/* Image Thumbnails with Centered Container */}
+          {/* Image Thumbnails */}
           {images.length > 1 && (
             <div className="flex items-center gap-3 overflow-x-auto pb-2">
               {images.map((img) => (
@@ -187,7 +205,7 @@ const ProductDetailPage = () => {
             </div>
           )}
 
-          {/* Product Description Block */}
+          {/* Description Block */}
           {product.description && (
             <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-3 mt-6">
               <h2 className="text-lg font-bold text-slate-900">Product Description</h2>
@@ -207,6 +225,17 @@ const ProductDetailPage = () => {
                 {product.brand?.name || product.category?.name || "Official Store"}
               </span>
               <h1 className="text-2xl font-bold text-slate-900 mt-1">{product.name}</h1>
+              
+              {/* Rating Badge */}
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center text-amber-400 text-sm">
+                  {"★".repeat(Math.round(Number(product.averageRating || 5)))}
+                  {"☆".repeat(5 - Math.round(Number(product.averageRating || 5)))}
+                </div>
+                <span className="text-xs font-bold text-slate-700">{Number(product.averageRating || 5).toFixed(1)}</span>
+                <span className="text-xs text-slate-400">({product.reviewCount || reviews.length} customer reviews)</span>
+              </div>
+
               <p className="text-xs text-slate-500 mt-1">SKU: {currentVariant?.sku || product.sku}</p>
             </div>
 
@@ -367,16 +396,57 @@ const ProductDetailPage = () => {
               </div>
               <div className="flex items-center gap-2">
                 <RefreshCw size={16} className="text-purple-600" />
-                <span>Easy returns within 30 days</span>
+                <span>Easy 24-Hour Return Window upon delivery</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Customer Reviews Showcase */}
+      <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Customer Reviews & Ratings</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Verified purchaser reviews</p>
+          </div>
+          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-amber-900">
+            <span className="text-2xl font-black">{Number(product.averageRating || 5).toFixed(1)}</span>
+            <div>
+              <div className="text-amber-400 text-sm">
+                {"★".repeat(Math.round(Number(product.averageRating || 5)))}
+                {"☆".repeat(5 - Math.round(Number(product.averageRating || 5)))}
+              </div>
+              <span className="text-[11px] text-amber-800 font-semibold">{reviews.length} reviews</span>
+            </div>
+          </div>
+        </div>
+
+        {reviews.length === 0 ? (
+          <p className="text-xs text-slate-500 text-center py-6">
+            No reviews submitted yet for this product. Delivered order customers can leave reviews under My Orders!
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {reviews.map((rev) => (
+              <div key={rev.id} className="border-b border-slate-100 pb-4 last:border-0 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900">{rev.user?.name || "Customer"}</span>
+                  <span className="text-[11px] text-slate-400">{new Date(rev.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="text-amber-400 text-xs">
+                  {"★".repeat(rev.rating)}{"☆".repeat(5 - rev.rating)}
+                </div>
+                {rev.comment && <p className="text-xs text-slate-600 leading-relaxed pt-1">{rev.comment}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* Related Products Carousel */}
       {product.relatedProducts && product.relatedProducts.length > 0 && (
-        <section className="space-y-4 pt-6 border-t">
+        <section className="space-y-4 pt-4 border-t">
           <h2 className="text-xl font-bold text-slate-900">
             More items from {product.category?.name || "this collection"}
           </h2>

@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum AdminRole {
@@ -37,6 +36,7 @@ model User {
   orders   Order[]
   addresses Address[]
   wishlists Wishlist[]
+  reviews   Review[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -171,6 +171,7 @@ model Product {
   variants    ProductVariant[]
   collections ProductCollection[]
   wishlists   Wishlist[]
+  reviews     Review[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -382,3 +383,19 @@ model OrderItem {
 
   @@index([orderId])
 }
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      @default(5)
+  comment   String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([productId])
+}
+
