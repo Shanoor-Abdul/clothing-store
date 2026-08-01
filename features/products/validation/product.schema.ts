@@ -19,10 +19,12 @@ export const ProductSchema = z.object({
   isFeatured: z.boolean(),
   isActive: z.boolean(),
 
-  // Image upload - array of URLs (existing) or File objects (new uploads)
-  images: z.array(z.any()).optional().default([]),
+  images: z.array(z.object({
+    imageUrl: z.string(),
+    altText: z.string().optional(),
+    displayOrder: z.number().optional(),
+  }).or(z.any())).optional().default([]),
 
-  // Variants
   variants: z
     .array(
       z.object({
@@ -69,6 +71,6 @@ export interface ProductFormData {
   isReturnable: boolean;
   isFeatured: boolean;
   isActive: boolean;
-  images: any[];
+  images: Array<{ imageUrl: string; altText?: string; displayOrder?: number } | File>;
   variants: VariantFormItem[];
 }
