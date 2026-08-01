@@ -1,31 +1,32 @@
 import prisma from "@/lib/prisma";
-
 import { ProductFormData } from "../validation/product.schema";
+
+const productIncludeConfig = {
+  category: true,
+  brand: true,
+  images: {
+    orderBy: {
+      displayOrder: "asc" as const,
+    },
+  },
+  videos: true,
+  variants: {
+    include: {
+      color: true,
+      size: true,
+    },
+  },
+  collections: {
+    include: {
+      collection: true,
+    },
+  },
+};
 
 export class ProductService {
   static async getAll() {
     return prisma.product.findMany({
-      include: {
-        category: true,
-        brand: true,
-        images: {
-          orderBy: {
-            displayOrder: "asc",
-          },
-        },
-        videos: true,
-        variants: {
-          include: {
-            color: true,
-            size: true,
-          },
-        },
-        collections: {
-          include: {
-            collection: true,
-          },
-        },
-      },
+      include: productIncludeConfig,
       orderBy: {
         createdAt: "desc",
       },
@@ -38,15 +39,7 @@ export class ProductService {
         isActive: true,
         status: "PUBLISHED",
       },
-      include: {
-        category: true,
-        brand: true,
-        images: {
-          orderBy: {
-            displayOrder: "asc",
-          },
-        },
-      },
+      include: productIncludeConfig,
       orderBy: {
         createdAt: "desc",
       },
@@ -58,47 +51,22 @@ export class ProductService {
       where: {
         id,
       },
-      include: {
-        category: true,
-        brand: true,
-        images: true,
-        videos: true,
-        variants: {
-          include: {
-            color: true,
-            size: true,
-          },
-        },
-        collections: {
-          include: {
-            collection: true,
-          },
-        },
-      },
+      include: productIncludeConfig,
     });
   }
 
-  static async create(
-    data: ProductFormData
-  ) {
-    const exists =
-      await prisma.product.findFirst({
-        where: {
-          OR: [
-            {
-              sku: data.sku,
-            },
-            {
-              slug: data.slug,
-            },
-          ],
-        },
-      });
+  static async create(data: ProductFormData) {
+    const exists = await prisma.product.findFirst({
+      where: {
+        OR: [
+          { sku: data.sku },
+          { slug: data.slug },
+        ],
+      },
+    });
 
     if (exists) {
-      throw new Error(
-        "Product already exists."
-      );
+      throw new Error("Product already exists.");
     }
 
     return prisma.product.create({
@@ -106,40 +74,22 @@ export class ProductService {
         name: data.name,
         slug: data.slug,
         sku: data.sku,
-
         description: data.description,
-        shortDescription:
-          data.shortDescription || null,
-
+        shortDescription: data.shortDescription || null,
         price: data.price,
-        discount:
-          data.discount || null,
-        sellingPrice:
-          data.sellingPrice,
-
-        weight:
-          data.weight || null,
-
-        material:
-          data.material || null,
-
+        discount: data.discount || null,
+        sellingPrice: data.sellingPrice,
+        weight: data.weight || null,
+        material: data.material || null,
         status: data.status,
-
-        isReturnable:
-          data.isReturnable,
-
-        isFeatured:
-          data.isFeatured,
-
-        isActive:
-          data.isActive,
-
+        isReturnable: data.isReturnable,
+        isFeatured: data.isFeatured,
+        isActive: data.isActive,
         category: {
           connect: {
             id: data.categoryId,
           },
         },
-
         brand: data.brandId
           ? {
               connect: {
@@ -147,29 +97,15 @@ export class ProductService {
               },
             }
           : undefined,
-
         collections: {
           create:
-            data.collectionIds?.map(
-              (
-                collectionId
-              ) => ({
-                collection: {
-                  connect: {
-                    id: collectionId,
-                  },
+            data.collectionIds?.map((collectionId) => ({
+              collection: {
+                connect: {
+                  id: collectionId,
                 },
-              })
-            ) ?? [],
-        },
-      },
-      include: {
-        category: true,
-        brand: true,
-        collections: {
-          include: {
-            collection: true,
-          },
+              },
+            })) ?? [],
         },
         images: {
           orderBy: {
@@ -177,34 +113,25 @@ export class ProductService {
           },
         },
       },
+      include: productIncludeConfig,
     });
   }
 
-  static async update(
-    id: string,
-    data: ProductFormData
-  ) {
-    const exists =
-      await prisma.product.findFirst({
-        where: {
-          id: {
-            not: id,
-          },
-          OR: [
-            {
-              sku: data.sku,
-            },
-            {
-              slug: data.slug,
-            },
-          ],
+  static async update(id: string, data: ProductFormData) {
+    const exists = await prisma.product.findFirst({
+      where: {
+        id: {
+          not: id,
         },
-      });
+        OR: [
+          { sku: data.sku },
+          { slug: data.slug },
+        ],
+      },
+    });
 
     if (exists) {
-      throw new Error(
-        "Product already exists."
-      );
+      throw new Error("Product already exists.");
     }
 
     await prisma.productImage.deleteMany({
@@ -227,40 +154,22 @@ export class ProductService {
         name: data.name,
         slug: data.slug,
         sku: data.sku,
-
         description: data.description,
-        shortDescription:
-          data.shortDescription || null,
-
+        shortDescription: data.shortDescription || null,
         price: data.price,
-        discount:
-          data.discount || null,
-        sellingPrice:
-          data.sellingPrice,
-
-        weight:
-          data.weight || null,
-
-        material:
-          data.material || null,
-
+        discount: data.discount || null,
+        sellingPrice: data.sellingPrice,
+        weight: data.weight || null,
+        material: data.material || null,
         status: data.status,
-
-        isReturnable:
-          data.isReturnable,
-
-        isFeatured:
-          data.isFeatured,
-
-        isActive:
-          data.isActive,
-
+        isReturnable: data.isReturnable,
+        isFeatured: data.isFeatured,
+        isActive: data.isActive,
         category: {
           connect: {
             id: data.categoryId,
           },
         },
-
         brand: data.brandId
           ? {
               connect: {
@@ -270,29 +179,15 @@ export class ProductService {
           : {
               disconnect: true,
             },
-
         collections: {
           create:
-            data.collectionIds?.map(
-              (
-                collectionId
-              ) => ({
-                collection: {
-                  connect: {
-                    id: collectionId,
-                  },
+            data.collectionIds?.map((collectionId) => ({
+              collection: {
+                connect: {
+                  id: collectionId,
                 },
-              })
-            ) ?? [],
-        },
-      },
-      include: {
-        category: true,
-        brand: true,
-        collections: {
-          include: {
-            collection: true,
-          },
+              },
+            })) ?? [],
         },
         images: {
           orderBy: {
@@ -300,12 +195,11 @@ export class ProductService {
           },
         },
       },
+      include: productIncludeConfig,
     });
   }
 
-  static async delete(
-    id: string
-  ) {
+  static async delete(id: string) {
     return prisma.product.delete({
       where: {
         id,

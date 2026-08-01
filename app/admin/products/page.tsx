@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useBrands } from "@/features/brand/hooks/useBrands";
 import { useCategories } from "@/features/category/hooks/useCategories";
 import { useColors } from "@/features/color/hooks/useColors";
 import { useSizes } from "@/features/size/hooks/useSizes";
+import { useCollections } from "@/features/collection/hooks/useCollections";
 import {
   useCreateProduct,
   useDeleteProduct,
@@ -17,12 +17,10 @@ import {
 } from "@/features/products/hooks/useProducts";
 import {
   createProductVariant,
-  deleteProductImage,
-  deleteProductVariant,
   updateProductVariant,
   uploadProductImage,
 } from "@/features/products/api";
-import { Product, ProductVariant } from "@/features/products/types/product";
+import { Product } from "@/features/products/types/product";
 import { ProductFormData } from "@/features/products/validation/product.schema";
 import ProductForm from "@/features/products/components/ProductForm";
 import {
@@ -39,6 +37,7 @@ const ProductsPage = () => {
   const { data: brands = [] } = useBrands();
   const { data: colors = [] } = useColors();
   const { data: sizes = [] } = useSizes();
+  const { data: collections = [] } = useCollections();
 
   const createMutation = useCreateProduct();
   const updateMutation = useUpdateProduct();
@@ -77,7 +76,7 @@ const ProductsPage = () => {
             }
           }
 
-          // Sync variants
+          // Sync variants with custom pricing override
           if (variants && variants.length > 0) {
             const existingIds = new Set(
               (editingProduct.variants || []).map((v) => v.id)
@@ -130,7 +129,7 @@ const ProductsPage = () => {
             }
           }
 
-          // Create variants
+          // Create variants with custom pricing
           if (variants && variants.length > 0) {
             const variantPromises = variants.map((variant) =>
               createProductVariant({
@@ -176,7 +175,7 @@ const ProductsPage = () => {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Product Management</h1>
-        <p className="mt-2 text-slate-500">Manage all products</p>
+        <p className="mt-2 text-slate-500">Manage all products, images, variants, and pricing</p>
       </div>
 
       <ProductForm
@@ -192,13 +191,13 @@ const ProductsPage = () => {
         brands={brands}
         colors={colors}
         sizes={sizes}
-        collections={[]}
+        collections={collections}
         editingProduct={editingProduct}
         onCancel={() => setEditingProduct(null)}
       />
 
       {isLoading ? (
-        <div className="rounded-xl border bg-white p-8 text-center">Loading...</div>
+        <div className="rounded-xl border bg-white p-8 text-center">Loading products...</div>
       ) : (
         <ProductTable
           products={products}
