@@ -11,6 +11,22 @@ export interface Category {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  parent?: {
+    id: string;
+    name: string;
+  } | null;
+  children?: Array<{
+    id: string;
+    name: string;
+  }>;
+  products?: Array<{
+    id: string;
+    name: string;
+  }>;
+  subCategoryProducts?: Array<{
+    id: string;
+    name: string;
+  }>;
 }
 
 export interface CreateCategoryPayload {

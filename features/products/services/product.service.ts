@@ -7,6 +7,7 @@ export class ProductService {
     return prisma.product.findMany({
       include: {
         category: true,
+        subcategory: true,
         brand: true,
         images: {
           orderBy: {
@@ -40,6 +41,7 @@ export class ProductService {
       },
       include: {
         category: true,
+        subcategory: true,
         brand: true,
         images: {
           orderBy: {
@@ -60,6 +62,7 @@ export class ProductService {
       },
       include: {
         category: true,
+        subcategory: true,
         brand: true,
         images: true,
         videos: true,
@@ -140,6 +143,14 @@ export class ProductService {
           },
         },
 
+        subcategory: data.subcategoryId
+          ? {
+              connect: {
+                id: data.subcategoryId,
+              },
+            }
+          : undefined,
+
         brand: data.brandId
           ? {
               connect: {
@@ -174,9 +185,22 @@ export class ProductService {
               displayOrder: img.displayOrder ?? index,
             })),
         },
+
+        variants: {
+          create: (data.variants || []).map((variant) => ({
+            sku: variant.sku,
+            barcode: variant.barcode || null,
+            stock: variant.stock,
+            price: variant.price || null,
+            isActive: variant.isActive,
+            colorId: variant.colorId,
+            sizeId: variant.sizeId,
+          })),
+        },
       },
       include: {
         category: true,
+        subcategory: true,
         brand: true,
         collections: {
           include: {
@@ -186,6 +210,12 @@ export class ProductService {
         images: {
           orderBy: {
             displayOrder: "asc",
+          },
+        },
+        variants: {
+          include: {
+            color: true,
+            size: true,
           },
         },
       },
@@ -275,6 +305,16 @@ export class ProductService {
           },
         },
 
+        subcategory: data.subcategoryId
+          ? {
+              connect: {
+                id: data.subcategoryId,
+              },
+            }
+          : {
+              disconnect: true,
+            },
+
         brand: data.brandId
           ? {
               connect: {
@@ -299,9 +339,23 @@ export class ProductService {
               })
             ) ?? [],
         },
+
+        variants: {
+          deleteMany: {},
+          create: (data.variants || []).map((variant) => ({
+            sku: variant.sku,
+            barcode: variant.barcode || null,
+            stock: variant.stock,
+            price: variant.price || null,
+            isActive: variant.isActive,
+            colorId: variant.colorId,
+            sizeId: variant.sizeId,
+          })),
+        },
       },
       include: {
         category: true,
+        subcategory: true,
         brand: true,
         collections: {
           include: {
@@ -311,6 +365,12 @@ export class ProductService {
         images: {
           orderBy: {
             displayOrder: "asc",
+          },
+        },
+        variants: {
+          include: {
+            color: true,
+            size: true,
           },
         },
       },

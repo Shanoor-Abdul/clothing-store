@@ -10,6 +10,7 @@ export const mapProductToForm = (
   sku: product.sku,
   shortDescription: product.shortDescription ?? "",
   categoryId: product.categoryId,
+  subcategoryId: product.subcategoryId ?? null,
   brandId: product.brandId,
   collectionIds: product.collectionIds ?? [],
   material: product.material ?? "",

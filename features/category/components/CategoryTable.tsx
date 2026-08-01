@@ -74,7 +74,7 @@ const CategoryTable = ({
               </td>
 
               <td className="px-5 py-4 text-slate-600">
-                {category.parentId ?? "-"}
+                {category.parent?.name || category.parentId || "-"}
               </td>
 
               <td className="px-5 py-4 text-center">

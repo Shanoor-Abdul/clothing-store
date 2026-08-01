@@ -60,6 +60,10 @@ const CategoriesPage = () => {
     }
   };
 
+  const parentCategories = categories.filter(
+    (c) => !c.parentId
+  );
+
   return (
     <div className="space-y-8">
       <div>
@@ -93,6 +97,8 @@ const CategoriesPage = () => {
           createMutation.isPending ||
           updateMutation.isPending
         }
+        parentCategories={parentCategories}
+        onCancel={() => setEditingCategory(null)}
       />
 
       {isLoading ? (

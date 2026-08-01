@@ -46,7 +46,7 @@ export const PRODUCT_TABLE_COLUMNS = [
   { key: "image", label: "Image" },
   { key: "name", label: "Product" },
   { key: "sku", label: "SKU" },
-  { key: "category", label: "Category" },
+  { key: "category", label: "Category / Subcategory" },
   { key: "price", label: "Price" },
   { key: "stock", label: "Stock" },
   { key: "status", label: "Status" },

@@ -7,6 +7,7 @@ export const ProductSchema = z.object({
   description: z.string().trim().min(5, "Description is required"),
   shortDescription: z.string().optional(),
   categoryId: z.string().min(1, "Category is required"),
+  subcategoryId: z.string().optional().nullable(),
   brandId: z.string().optional(),
   collectionIds: z.array(z.string()).default([]),
   material: z.string().optional(),
@@ -23,7 +24,7 @@ export const ProductSchema = z.object({
     imageUrl: z.string(),
     altText: z.string().optional(),
     displayOrder: z.number().optional(),
-  }).or(z.any())).optional().default([]),
+  })).optional().default([]),
 
   variants: z
     .array(
@@ -60,6 +61,7 @@ export interface ProductFormData {
   description: string;
   shortDescription?: string;
   categoryId: string;
+  subcategoryId?: string | null;
   brandId?: string;
   collectionIds: string[];
   material?: string;
@@ -71,6 +73,6 @@ export interface ProductFormData {
   isReturnable: boolean;
   isFeatured: boolean;
   isActive: boolean;
-  images: Array<{ imageUrl: string; altText?: string; displayOrder?: number } | File>;
+  images: Array<{ imageUrl: string; altText?: string; displayOrder?: number }>;
   variants: VariantFormItem[];
 }

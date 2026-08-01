@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -32,12 +32,25 @@ import ProductTable from "@/features/products/components/ProductTable";
 import DeleteProductModal from "@/features/products/components/DeleteProductModal";
 import { mapProductToForm } from "@/features/products/mapper";
 
+interface Option {
+  id: string;
+  name: string;
+}
+
 const ProductsPage = () => {
   const { data: products = [], isLoading } = useProducts();
   const { data: categories = [] } = useCategories();
   const { data: brands = [] } = useBrands();
   const { data: colors = [] } = useColors();
   const { data: sizes = [] } = useSizes();
+
+  const subcategories = useMemo(() => {
+    return categories.filter((c: any) => c.parentId).map((sub: any) => ({
+      id: sub.id,
+      name: sub.name,
+      parentId: sub.parentId,
+    }));
+  }, [categories]);
 
   const createMutation = useCreateProduct();
   const updateMutation = useUpdateProduct();
@@ -131,6 +144,7 @@ const ProductsPage = () => {
           createMutation.isPending || updateMutation.isPending
         }
         categories={categories}
+        subcategories={subcategories}
         brands={brands}
         colors={colors}
         sizes={sizes}
