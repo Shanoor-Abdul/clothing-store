@@ -58,15 +58,43 @@ export class ProductService {
   static async create(data: ProductFormData) {
     const exists = await prisma.product.findFirst({
       where: {
-        OR: [
-          { sku: data.sku },
-          { slug: data.slug },
-        ],
+        OR: [{ sku: data.sku }, { slug: data.slug }],
       },
     });
 
     if (exists) {
       throw new Error("Product already exists.");
+    }
+
+    const formattedImages: { imageUrl: string; altText: string; displayOrder: number }[] = [];
+    if (data.images && data.images.length > 0) {
+      data.images.forEach((img: any, idx: number) => {
+        const url = typeof img === "string" ? img : img?.imageUrl;
+        if (url) {
+          formattedImages.push({
+            imageUrl: url,
+            altText: typeof img === "object" && img?.altText ? img.altText : `${data.name}-${idx + 1}`,
+            displayOrder: typeof img === "object" && typeof img?.displayOrder === "number" ? img.displayOrder : idx + 1,
+          });
+        }
+      });
+    }
+
+    const formattedVariants: { sku: string; stock: number; barcode: string | null; price: number | null; isActive: boolean; colorId: string | null; sizeId: string | null }[] = [];
+    if (data.variants && data.variants.length > 0) {
+      data.variants.forEach((v: any) => {
+        if (v.sku) {
+          formattedVariants.push({
+            sku: v.sku,
+            stock: Number(v.stock || 0),
+            barcode: v.barcode || null,
+            price: v.price ? Number(v.price) : null,
+            isActive: v.isActive ?? true,
+            colorId: v.colorId || null,
+            sizeId: v.sizeId || null,
+          });
+        }
+      });
     }
 
     return prisma.product.create({
@@ -97,6 +125,18 @@ export class ProductService {
               },
             }
           : undefined,
+        images:
+          formattedImages.length > 0
+            ? {
+                create: formattedImages,
+              }
+            : undefined,
+        variants:
+          formattedVariants.length > 0
+            ? {
+                create: formattedVariants,
+              }
+            : undefined,
         collections: {
           create:
             data.collectionIds?.map((collectionId) => ({
@@ -118,15 +158,12 @@ export class ProductService {
         id: {
           not: id,
         },
-        OR: [
-          { sku: data.sku },
-          { slug: data.slug },
-        ],
+        OR: [{ sku: data.sku }, { slug: data.slug }],
       },
     });
 
     if (exists) {
-      throw new Error("Product already exists.");
+      throw new Error("Product with this SKU or Slug already exists.");
     }
 
     await prisma.productCollection.deleteMany({
@@ -134,6 +171,49 @@ export class ProductService {
         productId: id,
       },
     });
+
+    await prisma.productImage.deleteMany({
+      where: {
+        productId: id,
+      },
+    });
+
+    await prisma.productVariant.deleteMany({
+      where: {
+        productId: id,
+      },
+    });
+
+    const formattedImages: { imageUrl: string; altText: string; displayOrder: number }[] = [];
+    if (data.images && data.images.length > 0) {
+      data.images.forEach((img: any, idx: number) => {
+        const url = typeof img === "string" ? img : img?.imageUrl;
+        if (url) {
+          formattedImages.push({
+            imageUrl: url,
+            altText: typeof img === "object" && img?.altText ? img.altText : `${data.name}-${idx + 1}`,
+            displayOrder: typeof img === "object" && typeof img?.displayOrder === "number" ? img.displayOrder : idx + 1,
+          });
+        }
+      });
+    }
+
+    const formattedVariants: { sku: string; stock: number; barcode: string | null; price: number | null; isActive: boolean; colorId: string | null; sizeId: string | null }[] = [];
+    if (data.variants && data.variants.length > 0) {
+      data.variants.forEach((v: any) => {
+        if (v.sku) {
+          formattedVariants.push({
+            sku: v.sku,
+            stock: Number(v.stock || 0),
+            barcode: v.barcode || null,
+            price: v.price ? Number(v.price) : null,
+            isActive: v.isActive ?? true,
+            colorId: v.colorId || null,
+            sizeId: v.sizeId || null,
+          });
+        }
+      });
+    }
 
     return prisma.product.update({
       where: {
@@ -168,6 +248,18 @@ export class ProductService {
           : {
               disconnect: true,
             },
+        images:
+          formattedImages.length > 0
+            ? {
+                create: formattedImages,
+              }
+            : undefined,
+        variants:
+          formattedVariants.length > 0
+            ? {
+                create: formattedVariants,
+              }
+            : undefined,
         collections: {
           create:
             data.collectionIds?.map((collectionId) => ({

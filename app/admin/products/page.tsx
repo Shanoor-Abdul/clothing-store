@@ -15,11 +15,6 @@ import {
   useProducts,
   useUpdateProduct,
 } from "@/features/products/hooks/useProducts";
-import {
-  createProductVariant,
-  updateProductVariant,
-  uploadProductImage,
-} from "@/features/products/api";
 import { Product } from "@/features/products/types/product";
 import { ProductFormData } from "@/features/products/validation/product.schema";
 import ProductForm from "@/features/products/components/ProductForm";
@@ -46,109 +41,20 @@ const ProductsPage = () => {
 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
-  const [uploadingImages, setUploadingImages] = useState(false);
 
   const handleSubmit = async (data: ProductFormData) => {
     try {
-      // Extract images and variants before passing to mutation
-      const { images, variants, ...productData } = data;
-
       if (editingProduct) {
-        const updatedProduct = await updateMutation.mutateAsync({
+        await updateMutation.mutateAsync({
           id: editingProduct.id,
-          data: productData,
+          data,
         });
-
-        if (updatedProduct) {
-          // Upload new images if any were added via form
-          if (images && images.length > 0) {
-            const newImages = images.filter(
-              (img: unknown) => img instanceof File
-            ) as unknown as File[];
-            if (newImages.length > 0) {
-              setUploadingImages(true);
-              await Promise.all(
-                Array.from(newImages).map((file: File) =>
-                  uploadProductImage(editingProduct.id, file)
-                )
-              );
-              setUploadingImages(false);
-            }
-          }
-
-          // Sync variants with custom pricing override
-          if (variants && variants.length > 0) {
-            const existingIds = new Set(
-              (editingProduct.variants || []).map((v) => v.id)
-            );
-            for (const variant of variants) {
-              if (variant.id && existingIds.has(variant.id)) {
-                await updateProductVariant({
-                  id: variant.id,
-                  colorId: variant.colorId || undefined,
-                  sizeId: variant.sizeId || undefined,
-                  sku: variant.sku,
-                  barcode: variant.barcode || undefined,
-                  stock: Number(variant.stock),
-                  price: variant.price ? Number(variant.price) : undefined,
-                  isActive: variant.isActive,
-                });
-              } else {
-                await createProductVariant({
-                  productId: editingProduct.id,
-                  colorId: variant.colorId || undefined,
-                  sizeId: variant.sizeId || undefined,
-                  sku: variant.sku,
-                  barcode: variant.barcode || undefined,
-                  stock: Number(variant.stock),
-                  price: variant.price ? Number(variant.price) : undefined,
-                  isActive: variant.isActive,
-                });
-              }
-            }
-          }
-
-          toast.success("Product updated successfully");
-        }
+        toast.success("Product updated successfully");
+        setEditingProduct(null);
       } else {
-        const createdProduct = await createMutation.mutateAsync(productData);
-        if (createdProduct) {
-          // Upload images
-          if (images && images.length > 0) {
-            const fileImages = images.filter(
-              (img: unknown) => img instanceof File
-            ) as unknown as File[];
-            if (fileImages.length > 0) {
-              setUploadingImages(true);
-              await Promise.all(
-                Array.from(fileImages).map((file: File) =>
-                  uploadProductImage(createdProduct.id, file)
-                )
-              );
-              setUploadingImages(false);
-            }
-          }
-
-          // Create variants with custom pricing
-          if (variants && variants.length > 0) {
-            const variantPromises = variants.map((variant) =>
-              createProductVariant({
-                productId: createdProduct.id,
-                colorId: variant.colorId || undefined,
-                sizeId: variant.sizeId || undefined,
-                sku: variant.sku,
-                barcode: variant.barcode || undefined,
-                stock: Number(variant.stock),
-                price: variant.price ? Number(variant.price) : undefined,
-                isActive: variant.isActive,
-              })
-            );
-            await Promise.all(variantPromises);
-          }
-
-          toast.success("Product created successfully");
-          setEditingProduct(null);
-        }
+        await createMutation.mutateAsync(data);
+        toast.success("Product created successfully");
+        setEditingProduct(null);
       }
 
       await queryClient.invalidateQueries({ queryKey: PRODUCT_QUERY_KEY });
@@ -166,6 +72,7 @@ const ProductsPage = () => {
       await deleteMutation.mutateAsync(deleteProduct.id);
       setDeleteProduct(null);
       toast.success("Product deleted");
+      await queryClient.invalidateQueries({ queryKey: PRODUCT_QUERY_KEY });
     } catch (error) {
       console.error(error);
     }
@@ -175,18 +82,16 @@ const ProductsPage = () => {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Product Management</h1>
-        <p className="mt-2 text-slate-500">Manage all products, images, variants, and pricing</p>
+        <p className="mt-2 text-slate-500">Manage all store products, images, variants, and collections.</p>
       </div>
 
       <ProductForm
+        key={editingProduct ? editingProduct.id : "new-product-form"}
         onSubmit={handleSubmit}
         defaultValues={
           editingProduct ? mapProductToForm(editingProduct) : PRODUCT_DEFAULT_VALUES
         }
-        loading={
-          createMutation.isPending || updateMutation.isPending || uploadingImages
-        }
-        uploading={uploadingImages}
+        loading={createMutation.isPending || updateMutation.isPending}
         categories={categories}
         brands={brands}
         colors={colors}
@@ -197,7 +102,9 @@ const ProductsPage = () => {
       />
 
       {isLoading ? (
-        <div className="rounded-xl border bg-white p-8 text-center">Loading products...</div>
+        <div className="rounded-xl border bg-white p-8 text-center text-slate-500">
+          Loading product inventory...
+        </div>
       ) : (
         <ProductTable
           products={products}
