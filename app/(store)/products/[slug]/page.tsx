@@ -93,20 +93,18 @@ const ProductDetailPage = () => {
     ).values()
   );
 
-  // Filter variants based on color and size selections
+  // Filter variants based on user selection
   const filteredVariants = activeVariants.filter((variant) => {
     const matchesColor = !selectedColorId || variant.colorId === selectedColorId;
     const matchesSize = !selectedSizeId || variant.sizeId === selectedSizeId;
     return matchesColor && matchesSize;
   });
 
-  const currentVariant =
-    selectedVariant && filteredVariants.some((v) => v.id === selectedVariant.id)
-      ? selectedVariant
-      : filteredVariants[0] || null;
+  const currentVariant = selectedVariant || (selectedColorId || selectedSizeId ? filteredVariants[0] : null);
 
-  // Variant custom price overrides
-  const displayPrice = currentVariant?.price
+  // Base price vs Variant custom price logic:
+  // If user selected a variant with custom price, use variant.price. Otherwise use base product.sellingPrice!
+  const displayPrice = (currentVariant && currentVariant.price)
     ? Number(currentVariant.price)
     : Number(product.sellingPrice);
 
@@ -146,9 +144,9 @@ const ProductDetailPage = () => {
 
       {/* Main Product Layout */}
       <div className="grid gap-8 lg:grid-cols-12">
-        {/* Left Column: Image Gallery */}
+        {/* Left Column: Image Gallery with Centered Object-Contain */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm flex items-center justify-center p-4">
+          <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 shadow-sm flex items-center justify-center p-4">
             {image ? (
               <img
                 src={image}
@@ -167,7 +165,7 @@ const ProductDetailPage = () => {
             ) : null}
           </div>
 
-          {/* Image Thumbnails */}
+          {/* Image Thumbnails with Centered Container */}
           {images.length > 1 && (
             <div className="flex items-center gap-3 overflow-x-auto pb-2">
               {images.map((img) => (
@@ -175,21 +173,21 @@ const ProductDetailPage = () => {
                   key={img.id}
                   type="button"
                   onClick={() => setActiveImage(img.imageUrl)}
-                  className={`h-20 w-20 shrink-0 overflow-hidden rounded-xl border p-1 transition ${
+                  className={`h-20 w-20 shrink-0 overflow-hidden rounded-xl border bg-slate-50 p-1 flex items-center justify-center transition ${
                     image === img.imageUrl ? "border-blue-600 ring-2 ring-blue-200" : "border-slate-200 hover:border-slate-400"
                   }`}
                 >
                   <img
                     src={img.imageUrl}
                     alt={img.altText || product.name}
-                    className="h-full w-full object-cover rounded-lg"
+                    className="max-h-full max-w-full object-contain rounded-lg"
                   />
                 </button>
               ))}
             </div>
           )}
 
-          {/* Description Block */}
+          {/* Product Description Block */}
           {product.description && (
             <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-3 mt-6">
               <h2 className="text-lg font-bold text-slate-900">Product Description</h2>
@@ -228,7 +226,7 @@ const ProductDetailPage = () => {
             {availableColors.length > 0 && (
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-700">
-                  Select Color: <span className="text-blue-600 font-normal">{availableColors.find(c => c.id === selectedColorId)?.name || "All"}</span>
+                  Select Color: <span className="text-blue-600 font-normal">{availableColors.find(c => c.id === selectedColorId)?.name || "Default (Base)"}</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -264,7 +262,7 @@ const ProductDetailPage = () => {
             {availableSizes.length > 0 && (
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-700">
-                  Select Size: <span className="text-blue-600 font-normal">{availableSizes.find(s => s.id === selectedSizeId)?.name || "All"}</span>
+                  Select Size: <span className="text-blue-600 font-normal">{availableSizes.find(s => s.id === selectedSizeId)?.name || "Default (Base)"}</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -378,8 +376,10 @@ const ProductDetailPage = () => {
 
       {/* Related Products Carousel */}
       {product.relatedProducts && product.relatedProducts.length > 0 && (
-        <section className="space-y-4 pt-6">
-          <h2 className="text-xl font-bold text-slate-900">Customers also viewed</h2>
+        <section className="space-y-4 pt-6 border-t">
+          <h2 className="text-xl font-bold text-slate-900">
+            More items from {product.category?.name || "this collection"}
+          </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
             {product.relatedProducts.map((related) => (
               <ProductCard key={related.id} product={related} />

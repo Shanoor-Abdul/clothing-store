@@ -1,9 +1,10 @@
 "use client";
 
-import { Suspense, useState, useCallback } from "react";
+import { Suspense, useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { Filter, X, Search, RotateCcw, Check } from "lucide-react";
 
 import api from "@/lib/axios";
 import ProductCard from "../components/ProductCard";
@@ -21,6 +22,11 @@ interface ApiResponse<T> {
   data: T;
 }
 
+interface Brand {
+  id: string;
+  name: string;
+}
+
 const ITEMS_PER_PAGE = 12;
 
 const fetchProducts = async (url: string) => {
@@ -30,6 +36,11 @@ const fetchProducts = async (url: string) => {
 
 const fetchCategories = async () => {
   const { data } = await api.get<ApiResponse<Category[]>>("/categories");
+  return data.data;
+};
+
+const fetchBrands = async () => {
+  const { data } = await api.get<ApiResponse<Brand[]>>("/brands");
   return data.data;
 };
 
@@ -52,8 +63,11 @@ const ProductsPageInner = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [page, setPage] = useState(1);
+  const [brandSearch, setBrandSearch] = useState("");
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const category = searchParams.get("category");
+  const brand = searchParams.get("brand");
   const search = searchParams.get("search");
   const featured = searchParams.get("featured");
   const color = searchParams.get("color");
@@ -64,6 +78,7 @@ const ProductsPageInner = () => {
 
   const query = new URLSearchParams();
   if (category) query.set("category", category);
+  if (brand) query.set("brand", brand);
   if (search) query.set("search", search);
   if (featured) query.set("featured", featured);
   if (color) query.set("color", color);
@@ -81,6 +96,12 @@ const ProductsPageInner = () => {
   const { data: categories = [] } = useQuery({
     queryKey: ["categories", "list"],
     queryFn: fetchCategories,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: brands = [] } = useQuery({
+    queryKey: ["brands", "list"],
+    queryFn: fetchBrands,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -102,7 +123,6 @@ const ProductsPageInner = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Reset to page 1 when filters change
   const updateFilter = useCallback(
     (key: string, value: string) => {
       const params = new URLSearchParams(searchParams);
@@ -123,13 +143,20 @@ const ProductsPageInner = () => {
   }, [router]);
 
   const hasActiveFilters =
-    category || search || featured || color || size || collection || minPrice || maxPrice;
+    category || brand || search || featured || color || size || collection || minPrice || maxPrice;
+
+  const filteredBrands = useMemo(() => {
+    if (!brandSearch.trim()) return brands;
+    return brands.filter((b) =>
+      b.name.toLowerCase().includes(brandSearch.toLowerCase())
+    );
+  }, [brands, brandSearch]);
 
   const title = search
-    ? `Search: "${search}"`
+    ? `Results for "${search}"`
     : featured
-    ? "Featured Products"
-    : "All Products";
+    ? "Featured Drops & Sales"
+    : "Apparel Catalog";
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(products.length / ITEMS_PER_PAGE));
@@ -138,189 +165,245 @@ const ProductsPageInner = () => {
     page * ITEMS_PER_PAGE
   );
 
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-8 rounded-[2rem] border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-900/5 sm:p-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">{title}</h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Browse products, apply filters, and discover your next outfit.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 text-sm">
-            <span className="rounded-full bg-slate-100 px-3 py-2 text-slate-700">
-              {products.length} products
-            </span>
-            {featured && (
-              <span className="rounded-full bg-blue-50 px-3 py-2 text-blue-600">
-                Featured only
-              </span>
-            )}
+  const filterContent = (
+    <div className="space-y-6">
+      {hasActiveFilters && (
+        <button
+          onClick={clearAllFilters}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-slate-800 transition"
+        >
+          <RotateCcw size={14} /> Clear All Filters
+        </button>
+      )}
+
+      {/* Departments / Categories */}
+      {categories.length > 0 && (
+        <div className="space-y-2 border-b pb-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+            Departments
+          </h3>
+          <div className="space-y-1">
+            <Link
+              href="/products"
+              className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                !category
+                  ? "bg-blue-600 text-white font-bold"
+                  : "text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              <span>All Departments</span>
+            </Link>
+            {categories
+              .filter((c) => c.isActive)
+              .map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/products?category=${c.id}`}
+                  className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    category === c.id
+                      ? "bg-blue-600 text-white font-bold"
+                      : "text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span>{c.name}</span>
+                </Link>
+              ))}
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="grid gap-6 md:grid-cols-[280px_1fr]">
-        <aside className="space-y-4 md:sticky md:top-6 md:self-start">
-          {hasActiveFilters && (
-            <button
-              onClick={clearAllFilters}
-              className="w-full rounded-3xl bg-slate-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
-            >
-              Clear All Filters
-            </button>
-          )}
+      {/* Brands Multi-filter */}
+      {brands.length > 0 && (
+        <div className="space-y-2 border-b pb-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+            Brand
+          </h3>
+          <div className="relative my-2">
+            <Search size={14} className="absolute left-2.5 top-2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search brand..."
+              value={brandSearch}
+              onChange={(e) => setBrandSearch(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-blue-500"
+            />
+          </div>
+          <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+            {filteredBrands.map((b) => {
+              const isSelected = brand === b.id;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => updateFilter("brand", isSelected ? "" : b.id)}
+                  className={`flex w-full items-center justify-between rounded px-2 py-1 text-xs text-left transition ${
+                    isSelected ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span>{b.name}</span>
+                  {isSelected && <Check size={14} className="text-blue-600" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-          {/* Category Filter */}
-          {categories.length > 0 && (
-            <div className="rounded-[2rem] border bg-white p-5 shadow-sm">
-              <h3 className="mb-3 text-sm font-semibold text-slate-900">
-                Category
-              </h3>
-              <Link
-                href="/products"
-                className={`block rounded-2xl px-3 py-2 text-sm transition ${
-                  !category
-                    ? "bg-blue-600 text-white shadow"
-                    : "text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                All Categories
-              </Link>
-              {categories
-                .filter((c) => c.isActive)
-                .map((c) => (
-                  <Link
-                    key={c.id}
-                    href={`/products?category=${c.id}`}
-                    className={`block rounded-2xl px-3 py-2 text-sm transition ${
-                      category === c.id
-                        ? "bg-blue-600 text-white shadow"
-                        : "text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    {c.name}
-                  </Link>
-                ))}
-            </div>
-          )}
-
-          {/* Color Filter */}
-          {colors.length > 0 && (
-            <div className="rounded-lg border bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-800">
-                Color
-              </h3>
-              {colors
-                .filter((c) => c.isActive)
-                .map((c) => (
+      {/* Color Swatch Grid */}
+      {colors.length > 0 && (
+        <div className="space-y-2 border-b pb-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+            Color
+          </h3>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {colors
+              .filter((c) => c.isActive)
+              .map((c) => {
+                const isSelected = color === c.id;
+                return (
                   <button
                     key={c.id}
-                    onClick={() =>
-                      updateFilter("color", color === c.id ? "" : c.id)
-                    }
-                    className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm ${
-                      color === c.id
-                        ? "bg-blue-50 font-medium text-blue-600"
-                        : "hover:bg-slate-50"
+                    type="button"
+                    title={c.name}
+                    onClick={() => updateFilter("color", isSelected ? "" : c.id)}
+                    className={`relative h-7 w-7 rounded-full border border-slate-300 shadow-sm transition hover:scale-110 ${
+                      isSelected ? "ring-2 ring-blue-600 ring-offset-2" : ""
                     }`}
-                  >
-                    <div
-                      className="h-4 w-4 rounded-full border"
-                      style={{
-                        backgroundColor: c.hexCode || c.name.toLowerCase(),
-                      }}
-                    />
-                    {c.name}
-                  </button>
-                ))}
-            </div>
-          )}
+                    style={{ backgroundColor: c.hexCode || c.name.toLowerCase() }}
+                  />
+                );
+              })}
+          </div>
+        </div>
+      )}
 
-          {/* Size Filter */}
-          {sizes.length > 0 && (
-            <div className="rounded-lg border bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-800">
-                Size
-              </h3>
-              {sizes
-                .filter((s) => s.isActive)
-                .map((s) => (
+      {/* Size Pills */}
+      {sizes.length > 0 && (
+        <div className="space-y-2 border-b pb-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+            Size
+          </h3>
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {sizes
+              .filter((s) => s.isActive)
+              .map((s) => {
+                const isSelected = size === s.id;
+                return (
                   <button
                     key={s.id}
-                    onClick={() =>
-                      updateFilter("size", size === s.id ? "" : s.id)
-                    }
-                    className={`block w-full rounded px-2 py-1 text-left text-sm ${
-                      size === s.id
-                        ? "bg-blue-50 font-medium text-blue-600"
-                        : "hover:bg-slate-50"
+                    type="button"
+                    onClick={() => updateFilter("size", isSelected ? "" : s.id)}
+                    className={`rounded-lg border px-3 py-1 text-xs font-bold transition ${
+                      isSelected
+                        ? "border-blue-600 bg-blue-600 text-white shadow"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
                     }`}
                   >
                     {s.name}
                   </button>
-                ))}
-            </div>
-          )}
+                );
+              })}
+          </div>
+        </div>
+      )}
 
-          {/* Collection Filter */}
-          {collections.length > 0 && (
-            <div className="rounded-lg border bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-800">
-                Collection
-              </h3>
-              {collections
-                .filter((c) => c.isActive)
-                .map((c) => (
+      {/* Collections */}
+      {collections.length > 0 && (
+        <div className="space-y-2 border-b pb-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+            Collections
+          </h3>
+          <div className="space-y-1">
+            {collections
+              .filter((c) => c.isActive)
+              .map((c) => {
+                const isSelected = collection === c.id;
+                return (
                   <button
                     key={c.id}
-                    onClick={() =>
-                      updateFilter(
-                        "collection",
-                        collection === c.id ? "" : c.id
-                      )
-                    }
-                    className={`block w-full rounded px-2 py-1 text-left text-sm ${
-                      collection === c.id
-                        ? "bg-blue-50 font-medium text-blue-600"
-                        : "hover:bg-slate-50"
+                    type="button"
+                    onClick={() => updateFilter("collection", isSelected ? "" : c.id)}
+                    className={`block w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition ${
+                      isSelected ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-100"
                     }`}
                   >
                     {c.name}
                   </button>
-                ))}
-            </div>
-          )}
-
-          {/* Price Filter */}
-          <div className="rounded-lg border bg-white p-4">
-            <h3 className="mb-3 text-sm font-semibold text-slate-800">
-              Price Range
-            </h3>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                placeholder="Min"
-                value={minPrice || ""}
-                onChange={(e) =>
-                  updateFilter("minPrice", e.target.value)
-                }
-                className="w-full rounded border px-2 py-1 text-sm"
-              />
-              <input
-                type="number"
-                placeholder="Max"
-                value={maxPrice || ""}
-                onChange={(e) =>
-                  updateFilter("maxPrice", e.target.value)
-                }
-                className="w-full rounded border px-2 py-1 text-sm"
-              />
-            </div>
+                );
+              })}
           </div>
+        </div>
+      )}
+
+      {/* Price Range Filter */}
+      <div className="space-y-2">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+          Price Range ($)
+        </h3>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            placeholder="Min"
+            value={minPrice || ""}
+            onChange={(e) => updateFilter("minPrice", e.target.value)}
+            className="w-full rounded-lg border border-slate-200 p-2 text-xs outline-none focus:border-blue-500"
+          />
+          <span className="text-slate-400">-</span>
+          <input
+            type="number"
+            placeholder="Max"
+            value={maxPrice || ""}
+            onChange={(e) => updateFilter("maxPrice", e.target.value)}
+            className="w-full rounded-lg border border-slate-200 p-2 text-xs outline-none focus:border-blue-500"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
+      {/* Top Banner Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900">{title}</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Showing {products.length} available items
+          </p>
+        </div>
+
+        {/* Mobile Filter Toggle */}
+        <button
+          type="button"
+          onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
+          className="md:hidden flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow"
+        >
+          <Filter size={16} /> Filters {hasActiveFilters && "• Active"}
+        </button>
+      </div>
+
+      <div className="grid gap-8 md:grid-cols-[260px_1fr]">
+        {/* Desktop Sticky Filter Sidebar */}
+        <aside className="hidden md:block sticky top-28 h-max rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          {filterContent}
         </aside>
 
+        {/* Mobile Filter Drawer */}
+        {mobileFilterOpen && (
+          <div className="fixed inset-0 z-50 flex bg-slate-950/60 backdrop-blur-sm md:hidden">
+            <div className="ml-auto h-full w-4/5 max-w-xs bg-white p-6 shadow-2xl overflow-y-auto space-y-4">
+              <div className="flex items-center justify-between border-b pb-3">
+                <h2 className="text-sm font-bold text-slate-900">Filter Products</h2>
+                <button onClick={() => setMobileFilterOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+              {filterContent}
+            </div>
+          </div>
+        )}
+
+        {/* Main Product Grid Catalog */}
         <div className="space-y-6">
           {isLoading ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -329,8 +412,17 @@ const ProductsPageInner = () => {
               ))}
             </div>
           ) : products.length === 0 ? (
-            <div className="rounded-xl border bg-white p-8 text-center text-slate-500">
-              No products found.
+            <div className="rounded-2xl border bg-white p-12 text-center text-slate-500 shadow-sm space-y-3">
+              <p className="text-base font-bold text-slate-800">No matching products found</p>
+              <p className="text-xs text-slate-500">Try clearing filters or searching for another term.</p>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="inline-block rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow hover:bg-blue-700 transition"
+                >
+                  Clear All Filters
+                </button>
+              )}
             </div>
           ) : (
             <>

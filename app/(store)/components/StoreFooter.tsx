@@ -1,61 +1,87 @@
 import Link from "next/link";
+import { ShieldCheck, Truck, CreditCard, RefreshCw } from "lucide-react";
 
 const StoreFooter = () => {
   return (
-    <footer className="border-t border-slate-200/10 bg-slate-950 text-slate-300">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 md:grid-cols-4">
-        <div>
-          <h3 className="text-lg font-bold text-white">ClothingStore</h3>
-          <p className="mt-2 max-w-xs text-sm text-slate-400">
-            Quality fashion for everyone. Explore the latest collections with fast delivery and easy returns.
-          </p>
+    <footer className="border-t border-slate-800 bg-slate-950 text-slate-400">
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4 pb-8 border-b border-slate-800/80">
+          <div>
+            <Link href="/" className="inline-flex items-center gap-2 text-lg font-black text-white">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white font-extrabold text-xs">
+                S
+              </span>
+              <span>ClothingStore</span>
+            </Link>
+            <p className="mt-2 text-xs text-slate-400 leading-relaxed">
+              Curated clothing and modern apparel drops. Delivering quality fashion across Saudi Arabia and GCC.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Departments</h4>
+            <ul className="mt-3 space-y-2 text-xs">
+              <li>
+                <Link href="/products" className="hover:text-sky-400 transition">
+                  All Clothing Catalog
+                </Link>
+              </li>
+              <li>
+                <Link href="/products?featured=true" className="hover:text-sky-400 transition">
+                  Featured Deals & Drops
+                </Link>
+              </li>
+              <li>
+                <Link href="/cart" className="hover:text-sky-400 transition">
+                  Shopping Cart
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Customer Service</h4>
+            <ul className="mt-3 space-y-2 text-xs">
+              <li>
+                <Link href="/account/orders" className="hover:text-sky-400 transition">
+                  Track Your Orders
+                </Link>
+              </li>
+              <li>
+                <Link href="/account" className="hover:text-sky-400 transition">
+                  Account Details
+                </Link>
+              </li>
+              <li>
+                <span className="text-slate-400">Easy 30-Day Returns</span>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Accepted Payments</h4>
+            <p className="mt-3 text-xs text-slate-400 mb-3">
+              We accept Cash on Delivery & Credit/Debit Cards.
+            </p>
+            <div className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-300">
+              <span className="rounded bg-slate-900 border border-slate-800 px-2 py-1">VISA</span>
+              <span className="rounded bg-slate-900 border border-slate-800 px-2 py-1">Mastercard</span>
+              <span className="rounded bg-slate-900 border border-slate-800 px-2 py-1">COD</span>
+              <span className="rounded bg-slate-900 border border-slate-800 px-2 py-1">Apple Pay</span>
+            </div>
+          </div>
         </div>
-        <div>
-          <h4 className="font-semibold text-white">Shop</h4>
-          <ul className="mt-2 space-y-2 text-sm">
-            <li>
-              <Link href="/products" className="transition hover:text-white">
-                All Products
-              </Link>
-            </li>
-            <li>
-              <Link href="/products?featured=true" className="transition hover:text-white">
-                Featured
-              </Link>
-            </li>
-          </ul>
+
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <p>© {new Date().getFullYear()} ClothingStore Inc. All rights reserved.</p>
+          <div className="flex items-center gap-4 text-xs">
+            <span className="hover:text-slate-300 cursor-pointer">Privacy Notice</span>
+            <span>•</span>
+            <span className="hover:text-slate-300 cursor-pointer">Terms of Use</span>
+            <span>•</span>
+            <span className="hover:text-slate-300 cursor-pointer">Help & FAQs</span>
+          </div>
         </div>
-        <div>
-          <h4 className="font-semibold text-white">Account</h4>
-          <ul className="mt-2 space-y-2 text-sm">
-            <li>
-              <Link href="/login" className="transition hover:text-white">
-                Sign In
-              </Link>
-            </li>
-            <li>
-              <Link href="/register" className="transition hover:text-white">
-                Register
-              </Link>
-            </li>
-            <li>
-              <Link href="/cart" className="transition hover:text-white">
-                Cart
-              </Link>
-            </li>
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-semibold text-white">Support</h4>
-          <ul className="mt-2 space-y-2 text-sm text-slate-400">
-            <li className="transition hover:text-white">Help Center</li>
-            <li className="transition hover:text-white">Shipping & Returns</li>
-            <li className="transition hover:text-white">Privacy Policy</li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-slate-800/70 py-4 text-center text-sm text-slate-500">
-        © {new Date().getFullYear()} ClothingStore. All rights reserved.
       </div>
     </footer>
   );

@@ -49,40 +49,47 @@ const ProductCard = ({
       : 0;
 
   return (
-    <div className="group relative rounded-xl border bg-white p-3 shadow-sm transition hover:shadow-md">
-      <div className="absolute right-4 top-4 z-10">
+    <div className="group relative rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between">
+      <div className="absolute right-3 top-3 z-10">
         <WishlistButton productId={product.id} size={18} />
       </div>
 
-      <Link href={`/products/${product.slug}`} className="space-y-3">
-        <div className="relative aspect-square overflow-hidden rounded-lg bg-slate-100">
+      <Link href={`/products/${product.slug}`} className="space-y-3 block">
+        {/* Product Image Container with Centered Object-Contain */}
+        <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-slate-100">
           {image ? (
             <Image
               src={image}
               alt={product.name}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-cover transition duration-300 group-hover:scale-105"
+              className="object-contain p-1 transition-transform duration-500 group-hover:scale-105"
               loading="lazy"
+              unoptimized
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-slate-400">
+            <div className="flex h-full items-center justify-center text-xs font-semibold text-slate-400">
               No Image
             </div>
           )}
+          {Number(product.discount) > 0 && (
+            <span className="absolute left-2 top-2 rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white shadow">
+              -${product.discount}
+            </span>
+          )}
         </div>
 
-        <div>
-          <h3 className="line-clamp-2 text-sm font-medium text-slate-800">
+        <div className="space-y-1">
+          <h3 className="line-clamp-2 text-xs font-bold text-slate-900 group-hover:text-blue-600 transition">
             {product.name}
           </h3>
 
-          <div className="mt-2 flex items-center gap-2">
-            <span className="font-semibold text-slate-900">
+          <div className="flex items-baseline gap-2 pt-1">
+            <span className="text-base font-black text-slate-900">
               {formatCurrency(Number(product.sellingPrice))}
             </span>
             {Number(product.discount) > 0 && (
-              <span className="text-sm text-slate-400 line-through">
+              <span className="text-xs text-slate-400 line-through">
                 {formatCurrency(Number(product.price))}
               </span>
             )}
@@ -94,7 +101,7 @@ const ProductCard = ({
         <button
           type="button"
           onClick={onAddToCart}
-          className="mt-4 w-full rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
+          className="mt-3 w-full rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow transition hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50"
           disabled={stock === 0}
         >
           {stock === 0 ? "Out of stock" : actionLabel}
