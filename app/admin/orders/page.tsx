@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ShoppingCart, Search, Eye, RefreshCw, CheckCircle, PackageCheck, Truck, XCircle, Clock } from "lucide-react";
+import { Search, Eye, RefreshCw, ShoppingBag, CreditCard, Truck, User, MapPin, PackageCheck } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import { formatCurrency } from "@/utils";
 
 interface OrderItem {
   id: string;
+  productId: string;
   productName: string;
-  color?: string;
-  size?: string;
+  productImage?: string | null;
+  color?: string | null;
+  size?: string | null;
   quantity: number;
   price: number;
 }
@@ -21,6 +23,7 @@ interface Address {
   phone: string;
   street: string;
   city: string;
+  state?: string;
   country: string;
 }
 
@@ -30,6 +33,8 @@ interface Order {
   status: "PENDING" | "CONFIRMED" | "SHIPPED" | "DELIVERED" | "CANCELLED";
   paymentMethod: string;
   paymentStatus: string;
+  subtotal: number;
+  shipping: number;
   total: number;
   createdAt: string;
   user?: { name: string; email: string; mobile?: string };
@@ -79,7 +84,7 @@ export default function AdminOrdersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
       toast.success(`Order #${updated.orderNumber} status updated to ${updated.status}`);
       if (selectedOrder?.id === updated.id) {
-        setSelectedOrder(updated);
+        setSelectedOrder((prev) => prev ? { ...prev, status: updated.status } : null);
       }
     },
     onError: () => {
@@ -108,7 +113,7 @@ export default function AdminOrdersPage() {
         <button
           onClick={() => queryClient.invalidateQueries({ queryKey: ["admin", "orders"] })}
           disabled={isRefetching}
-          className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
         >
           <RefreshCw size={16} className={isRefetching ? "animate-spin text-blue-600" : ""} />
           {isRefetching ? "Refreshing..." : "Refresh Feed"}
@@ -161,7 +166,7 @@ export default function AdminOrdersPage() {
               <tr>
                 <th className="p-4">Order Number</th>
                 <th className="p-4">Customer</th>
-                <th className="p-4">Items</th>
+                <th className="p-4">Items Summary</th>
                 <th className="p-4">Date</th>
                 <th className="p-4">Total</th>
                 <th className="p-4">Status</th>
@@ -176,7 +181,7 @@ export default function AdminOrdersPage() {
                     <p className="font-medium text-slate-800">{order.user?.name || "Guest"}</p>
                     <p className="text-xs text-slate-400">{order.user?.email || "No email"}</p>
                   </td>
-                  <td className="p-4 text-slate-600">
+                  <td className="p-4 text-slate-600 max-w-xs truncate">
                     {order.items.map((i) => `${i.quantity}x ${i.productName}`).join(", ")}
                   </td>
                   <td className="p-4 text-slate-500">
@@ -203,7 +208,8 @@ export default function AdminOrdersPage() {
                   <td className="p-4 text-right">
                     <button
                       onClick={() => setSelectedOrder(order)}
-                      className="rounded-lg bg-slate-100 p-2 text-slate-700 hover:bg-slate-200"
+                      className="rounded-lg bg-slate-100 p-2 text-slate-700 hover:bg-slate-200 transition"
+                      title="View Full Order Details"
                     >
                       <Eye size={16} />
                     </button>
@@ -215,70 +221,136 @@ export default function AdminOrdersPage() {
         </div>
       )}
 
-      {/* Order Detail Modal */}
+      {/* Comprehensive Order Details Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl space-y-6 my-8">
+            {/* Modal Header */}
             <div className="flex items-center justify-between border-b pb-4">
               <div>
-                <h3 className="text-xl font-bold">Order Details #{selectedOrder.orderNumber}</h3>
-                <p className="text-xs text-slate-500">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">Order Detail View</span>
+                <h3 className="text-xl font-bold text-slate-900">{selectedOrder.orderNumber}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
                   Placed on {new Date(selectedOrder.createdAt).toLocaleString()}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200 transition"
               >
-                ✕
+                ✕ Close
               </button>
             </div>
 
-            <div className="my-4 space-y-4 text-sm">
-              <div>
-                <h4 className="font-semibold text-slate-800">Customer Details</h4>
-                <p className="text-slate-600">{selectedOrder.user?.name} ({selectedOrder.user?.email})</p>
+            {/* Customer & Address Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-slate-900 border-b pb-2">
+                  <User size={16} className="text-blue-600" /> Customer Information
+                </div>
+                <p className="font-bold text-slate-800 pt-1">{selectedOrder.user?.name || "Guest Customer"}</p>
+                <p className="text-slate-600">Email: {selectedOrder.user?.email || "N/A"}</p>
+                {selectedOrder.user?.mobile && <p className="text-slate-600">Phone: {selectedOrder.user.mobile}</p>}
               </div>
 
-              {selectedOrder.address && (
-                <div>
-                  <h4 className="font-semibold text-slate-800">Shipping Address</h4>
-                  <p className="text-slate-600">
-                    {selectedOrder.address.fullName} • {selectedOrder.address.phone}
+              {selectedOrder.address ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-900 border-b pb-2">
+                    <MapPin size={16} className="text-emerald-600" /> Shipping Address
+                  </div>
+                  <p className="font-bold text-slate-800 pt-1">{selectedOrder.address.fullName}</p>
+                  <p className="text-slate-600">Phone: {selectedOrder.address.phone}</p>
+                  <p className="text-slate-500 leading-relaxed">
+                    {selectedOrder.address.street}, {selectedOrder.address.city}
+                    {selectedOrder.address.state ? `, ${selectedOrder.address.state}` : ""}, {selectedOrder.address.country}
                   </p>
-                  <p className="text-slate-500">
-                    {selectedOrder.address.street}, {selectedOrder.address.city},{" "}
-                    {selectedOrder.address.country}
-                  </p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-900 border-b pb-2">
+                    <CreditCard size={16} className="text-purple-600" /> Payment Info
+                  </div>
+                  <p className="pt-1">Method: <span className="font-bold text-slate-900">{selectedOrder.paymentMethod === "COD" ? "Cash on Delivery" : selectedOrder.paymentMethod}</span></p>
+                  <p>Payment Status: <span className="font-bold text-amber-600">{selectedOrder.paymentStatus}</span></p>
                 </div>
               )}
+            </div>
 
-              <div>
-                <h4 className="font-semibold text-slate-800">Purchased Items</h4>
-                <div className="mt-2 space-y-2">
-                  {selectedOrder.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between rounded-lg border bg-slate-50 p-3"
-                    >
-                      <div>
-                        <p className="font-medium text-slate-900">{item.productName}</p>
-                        <p className="text-xs text-slate-500">
-                          {item.color && `Color: ${item.color}`} {item.size && `• Size: ${item.size}`}
-                        </p>
+            {/* Purchased Items List */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b pb-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                  <ShoppingBag size={16} className="text-blue-600" /> Purchased Product Items ({selectedOrder.items.length})
+                </h4>
+              </div>
+
+              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                {selectedOrder.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-sm hover:border-slate-300 transition gap-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Product Thumbnail */}
+                      <div className="h-14 w-14 shrink-0 rounded-lg border bg-slate-50 p-1 flex items-center justify-center overflow-hidden">
+                        {item.productImage ? (
+                          <img
+                            src={item.productImage}
+                            alt={item.productName}
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        ) : (
+                          <div className="text-[10px] font-bold text-slate-400 text-center">
+                            No Img
+                          </div>
+                        )}
                       </div>
-                      <p className="font-semibold text-slate-800">
-                        {item.quantity}x {formatCurrency(Number(item.price))}
+
+                      {/* Details */}
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{item.productName || "Product Item"}</p>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
+                          {item.color && (
+                            <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                              Color: {item.color}
+                            </span>
+                          )}
+                          {item.size && (
+                            <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                              Size: {item.size}
+                            </span>
+                          )}
+                          <span className="font-semibold text-slate-600">Qty: {item.quantity}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pricing */}
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-slate-400">{item.quantity} × {formatCurrency(Number(item.price))}</p>
+                      <p className="text-sm font-bold text-slate-900 mt-0.5">
+                        {formatCurrency(Number(item.price) * item.quantity)}
                       </p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="flex items-center justify-between border-t pt-4 font-bold text-lg">
-              <span>Total Amount</span>
-              <span className="text-blue-600">{formatCurrency(Number(selectedOrder.total))}</span>
+            {/* Total Amount Summary */}
+            <div className="rounded-xl bg-slate-900 p-4 text-white space-y-2">
+              <div className="flex justify-between text-xs text-slate-300">
+                <span>Items Subtotal</span>
+                <span>{formatCurrency(Number(selectedOrder.subtotal || selectedOrder.total))}</span>
+              </div>
+              <div className="flex justify-between text-xs text-slate-300">
+                <span>Shipping Fee</span>
+                <span>{selectedOrder.shipping > 0 ? formatCurrency(Number(selectedOrder.shipping)) : "FREE"}</span>
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-800 pt-2 text-base font-bold">
+                <span>Grand Total</span>
+                <span className="text-sky-400">{formatCurrency(Number(selectedOrder.total))}</span>
+              </div>
             </div>
           </div>
         </div>
