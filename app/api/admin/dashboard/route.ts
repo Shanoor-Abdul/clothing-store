@@ -3,31 +3,25 @@ import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const [
-      totalProducts,
-      totalCategories,
-      totalOrders,
-      totalCustomers,
-      recentOrders,
-      ordersByStatus,
-    ] = await Promise.all([
-      prisma.product.count({ where: { isActive: true } }),
-      prisma.category.count({ where: { isActive: true } }),
-      prisma.order.count(),
-      prisma.user.count({ where: { isActive: true } }),
-      prisma.order.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        include: {
-          items: true,
-          user: { select: { name: true, email: true } },
-        },
-      }),
-      prisma.order.groupBy({
-        by: ["status"],
-        _count: { id: true },
-      }),
-    ]);
+    // Run queries sequentially to prevent connection pool exhaustion (P2024)
+    const totalProducts = await prisma.product.count({ where: { isActive: true } });
+    const totalCategories = await prisma.category.count({ where: { isActive: true } });
+    const totalOrders = await prisma.order.count();
+    const totalCustomers = await prisma.user.count({ where: { isActive: true } });
+    
+    const recentOrders = await prisma.order.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      include: {
+        items: true,
+        user: { select: { name: true, email: true } },
+      },
+    });
+
+    const ordersByStatus = await prisma.order.groupBy({
+      by: ["status"],
+      _count: { id: true },
+    });
 
     const totalRevenue = await prisma.order.aggregate({
       _sum: { total: true },
