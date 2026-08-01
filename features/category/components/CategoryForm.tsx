@@ -12,16 +12,25 @@ import {
 import { CATEGORY_DEFAULT_VALUES } from "../constants/category";
 import { generateSlug } from "@/utils";
 
+interface Option {
+  id: string;
+  name: string;
+}
+
 interface CategoryFormProps {
   onSubmit: (data: CategoryFormData) => void;
   defaultValues?: Partial<CategoryFormData>;
   loading?: boolean;
+  parentCategories?: Option[];
+  onCancel?: () => void;
 }
 
 const CategoryForm = ({
   onSubmit,
   defaultValues,
   loading = false,
+  parentCategories = [],
+  onCancel,
 }: CategoryFormProps) => {
   const {
     register,
@@ -108,6 +117,30 @@ const CategoryForm = ({
           rows={4}
           className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
         />
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-slate-700">
+          Parent Category (Optional)
+        </label>
+
+        <select
+          {...register("parentId")}
+          className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+        >
+          <option value="">No Parent (Top Level)</option>
+          {parentCategories.map((parent) => (
+            <option key={parent.id} value={parent.id}>
+              {parent.name}
+            </option>
+          ))}
+        </select>
+
+        {errors.parentId && (
+          <p className="mt-1 text-sm text-red-500">
+            {errors.parentId.message}
+          </p>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

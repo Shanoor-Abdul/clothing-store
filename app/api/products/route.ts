@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const category = searchParams.get("category");
+    const subcategory = searchParams.get("subcategory");
     const search = searchParams.get("search");
     const featured = searchParams.get("featured");
     const color = searchParams.get("color");
@@ -23,6 +24,10 @@ export async function GET(request: NextRequest) {
 
     if (category) {
       where.categoryId = category;
+    }
+
+    if (subcategory) {
+      where.subcategoryId = subcategory;
     }
 
     if (featured === "true") {
@@ -72,6 +77,12 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         category: true,
+        subcategory: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         brand: true,
         images: {
           orderBy: { displayOrder: "asc" },

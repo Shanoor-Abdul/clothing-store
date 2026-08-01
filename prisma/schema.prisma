@@ -55,7 +55,8 @@ model Category {
   parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children Category[] @relation("CategoryHierarchy")
 
-  products Product[]
+  products        Product[] @relation("ProductCategory")
+  subCategoryProducts Product[] @relation("Subcategory")
 
   displayOrder Int     @default(0)
   isFeatured   Boolean @default(false)
@@ -157,7 +158,10 @@ model Product {
   isActive Boolean @default(true)
 
   categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
+  category   Category @relation("ProductCategory", fields: [categoryId], references: [id])
+
+  subcategoryId String?
+  subcategory   Category?  @relation("Subcategory", fields: [subcategoryId], references: [id])
 
   brandId String?
   brand   Brand?  @relation(fields: [brandId], references: [id])
@@ -172,6 +176,7 @@ model Product {
   updatedAt DateTime @updatedAt
 
   @@index([categoryId])
+  @@index([subcategoryId])
   @@index([brandId])
   @@index([status])
 }

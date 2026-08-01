@@ -26,6 +26,28 @@ const productIncludeConfig = {
 export class ProductService {
   static async getAll() {
     return prisma.product.findMany({
+      include: {
+        category: true,
+        subcategory: true,
+        brand: true,
+        images: {
+          orderBy: {
+            displayOrder: "asc",
+          },
+        },
+        videos: true,
+        variants: {
+          include: {
+            color: true,
+            size: true,
+          },
+        },
+        collections: {
+          include: {
+            collection: true,
+          },
+        },
+      },
       include: productIncludeConfig,
       orderBy: {
         createdAt: "desc",
@@ -38,6 +60,16 @@ export class ProductService {
       where: {
         isActive: true,
         status: "PUBLISHED",
+      },
+      include: {
+        category: true,
+        subcategory: true,
+        brand: true,
+        images: {
+          orderBy: {
+            displayOrder: "asc",
+          },
+        },
       },
       include: productIncludeConfig,
       orderBy: {
@@ -118,6 +150,15 @@ export class ProductService {
             id: data.categoryId,
           },
         },
+
+        subcategory: data.subcategoryId
+          ? {
+              connect: {
+                id: data.subcategoryId,
+              },
+            }
+          : undefined,
+
         brand: data.brandId
           ? {
               connect: {
@@ -144,8 +185,55 @@ export class ProductService {
                 connect: {
                   id: collectionId,
                 },
+              })
+            ) ?? [],
+        },
+
+        images: {
+          create: (data.images || [])
+            .filter((img): img is { imageUrl: string; altText?: string; displayOrder?: number } => 
+              typeof img !== "string" && "imageUrl" in img
+            )
+            .map((img, index) => ({
+              imageUrl: img.imageUrl,
+              altText: img.altText || null,
+              displayOrder: img.displayOrder ?? index,
+            })),
+        },
+
+        variants: {
+          create: (data.variants || []).map((variant) => ({
+            sku: variant.sku,
+            barcode: variant.barcode || null,
+            stock: variant.stock,
+            price: variant.price || null,
+            isActive: variant.isActive,
+            colorId: variant.colorId,
+            sizeId: variant.sizeId,
+          })),
+        },
+      },
+      include: {
+        category: true,
+        subcategory: true,
+        brand: true,
+        collections: {
+          include: {
+            collection: true,
+          },
+        },
+        images: {
+          orderBy: {
+            displayOrder: "asc",
+          },
               },
             })) ?? [],
+        },
+        variants: {
+          include: {
+            color: true,
+            size: true,
+          },
         },
       },
       include: productIncludeConfig,
@@ -239,6 +327,17 @@ export class ProductService {
             id: data.categoryId,
           },
         },
+
+        subcategory: data.subcategoryId
+          ? {
+              connect: {
+                id: data.subcategoryId,
+              },
+            }
+          : {
+              disconnect: true,
+            },
+
         brand: data.brandId
           ? {
               connect: {
@@ -267,8 +366,44 @@ export class ProductService {
                 connect: {
                   id: collectionId,
                 },
+              })
+            ) ?? [],
+        },
+
+        variants: {
+          deleteMany: {},
+          create: (data.variants || []).map((variant) => ({
+            sku: variant.sku,
+            barcode: variant.barcode || null,
+            stock: variant.stock,
+            price: variant.price || null,
+            isActive: variant.isActive,
+            colorId: variant.colorId,
+            sizeId: variant.sizeId,
+          })),
+        },
+      },
+      include: {
+        category: true,
+        subcategory: true,
+        brand: true,
+        collections: {
+          include: {
+            collection: true,
+          },
+        },
+        images: {
+          orderBy: {
+            displayOrder: "asc",
+          },
               },
             })) ?? [],
+        },
+        variants: {
+          include: {
+            color: true,
+            size: true,
+          },
         },
       },
       include: productIncludeConfig,

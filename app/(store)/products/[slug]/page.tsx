@@ -195,6 +195,7 @@ const ProductDetailPage = () => {
               <div>
                 <p className="text-sm uppercase tracking-[0.24em] text-slate-500">
                   {product.category?.name || "Uncategorized"}
+                  {product.subcategory && ` → ${product.subcategory.name}`}
                 </p>
                 <h1 className="mt-2 text-4xl font-semibold text-slate-900">
                   {product.name}
@@ -229,6 +230,13 @@ const ProductDetailPage = () => {
             )}
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-3xl border bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-600">Category</p>
+                <p className="text-base text-slate-900">
+                  {product.category?.name || "Uncategorized"}
+                  {product.subcategory && ` → ${product.subcategory.name}`}
+                </p>
+              </div>
               <div className="rounded-3xl border bg-slate-50 p-4">
                 <p className="text-sm font-semibold text-slate-600">Brand</p>
                 {product.brand?.logo ? (
@@ -445,7 +453,10 @@ const ProductDetailPage = () => {
             <dl className="mt-5 grid gap-4 text-sm text-slate-600 sm:grid-cols-2">
               <div className="rounded-2xl bg-slate-50 p-4">
                 <dt className="font-semibold text-slate-800">Category</dt>
-                <dd className="mt-1">{product.category?.name || "Uncategorized"}</dd>
+                <dd className="mt-1">
+                  {product.category?.name || "Uncategorized"}
+                  {product.subcategory && ` → ${product.subcategory.name}`}
+                </dd>
               </div>
               <div className="rounded-2xl bg-slate-50 p-4">
                 <dt className="font-semibold text-slate-800">Brand</dt>

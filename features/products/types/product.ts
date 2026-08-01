@@ -25,12 +25,18 @@ export interface Product {
   status: ProductStatus;
 
   categoryId: string;
+  subcategoryId?: string | null;
   brandId?: string | null;
 
   createdAt: string;
   updatedAt: string;
 
   category?: {
+    id: string;
+    name: string;
+  };
+
+  subcategory?: {
     id: string;
     name: string;
   };
@@ -139,6 +145,7 @@ export interface CreateProductPayload {
   isActive: boolean;
 
   categoryId: string;
+  subcategoryId?: string | null;
   brandId?: string;
 
   collectionIds?: string[];

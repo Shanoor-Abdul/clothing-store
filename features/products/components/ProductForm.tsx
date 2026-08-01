@@ -31,6 +31,7 @@ interface ProductFormProps {
   loading?: boolean;
   uploading?: boolean;
   categories: Option[];
+  subcategories: Option[];
   brands: Option[];
   colors: Option[];
   sizes: Option[];
@@ -45,6 +46,7 @@ const ProductForm = ({
   loading = false,
   uploading = false,
   categories,
+  subcategories,
   brands,
   colors,
   sizes,
@@ -194,6 +196,81 @@ const ProductForm = ({
     });
   }, [watch, categories, append]);
 
+  const addVariantsFromSelection = useCallback((
+    selectedColorIds: string[],
+    selectedSizeIds: string[]
+  ) => {
+    if (selectedColorIds.length === 0 && selectedSizeIds.length === 0) return;
+
+    const name = watch("name");
+    const cat = watch("categoryId");
+    const currentVariants = watch("variants") || [];
+    
+    const colorIds = selectedColorIds.length > 0 ? selectedColorIds : [""];
+    const sizeIds = selectedSizeIds.length > 0 ? selectedSizeIds : [""];
+
+    const newVariants = colorIds.flatMap((colorId, colorIdx) => {
+      const colorVariants = sizeIds.map((sizeId, sizeIdx) => {
+        const isColorOnly = selectedSizeIds.length === 0 && selectedColorIds.length > 0;
+        const isSizeOnly = selectedColorIds.length === 0 && selectedSizeIds.length > 0;
+        const isBoth = selectedColorIds.length > 0 && selectedSizeIds.length > 0;
+        
+        if (isColorOnly && colorId !== "") {
+          return {
+            sku: `${generateSku(
+              categories.find((c) => c.id === cat)?.name || "PROD",
+              name
+            )}-${String(currentVariants.length + colorIdx).padStart(2, "0")}`,
+            stock: 0,
+            isActive: true,
+            barcode: null,
+            price: null,
+            colorId,
+            sizeId: null,
+          };
+        }
+        
+        if (isSizeOnly && sizeId !== "") {
+          return {
+            sku: `${generateSku(
+              categories.find((c) => c.id === cat)?.name || "PROD",
+              name
+            )}-${String(currentVariants.length + sizeIdx).padStart(2, "0")}`,
+            stock: 0,
+            isActive: true,
+            barcode: null,
+            price: null,
+            colorId: null,
+            sizeId,
+          };
+        }
+        
+        if (isBoth) {
+          return {
+            sku: `${generateSku(
+              categories.find((c) => c.id === cat)?.name || "PROD",
+              name
+            )}-${String(currentVariants.length + colorIdx * sizeIds.length + sizeIdx).padStart(2, "0")}`,
+            stock: 0,
+            isActive: true,
+            barcode: null,
+            price: null,
+            colorId,
+            sizeId,
+          };
+        }
+        
+        return null;
+      }).filter(Boolean);
+      
+      return colorVariants;
+    }).filter(Boolean) as any[];
+
+    newVariants.forEach(variant => {
+      append(variant);
+    });
+  }, [watch, categories, append]);
+
   const isEditing = !!editingProduct;
 
   const imageUrl = (img: unknown): string => {
@@ -271,7 +348,27 @@ const ProductForm = ({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">Brand</label>
+          <label className="mb-2 block">Subcategory</label>
+          <select
+            {...register("subcategoryId")}
+            className="w-full rounded-lg border p-3"
+          >
+            <option value="">No Subcategory (Optional)</option>
+            {subcategories.map((subcategory) => (
+              <option key={subcategory.id} value={subcategory.id}>
+                {subcategory.name}
+              </option>
+            ))}
+          </select>
+          {errors.subcategoryId && (
+            <p className="mt-1 text-sm text-red-500">
+              {errors.subcategoryId.message}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="mb-2 block">Brand</label>
           <select
             {...register("brandId")}
             className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
@@ -442,6 +539,63 @@ const ProductForm = ({
           </button>
         </div>
 
+        <div className="mt-4 rounded-lg border border-dashed p-4">
+          <h3 className="mb-3 text-sm font-medium text-slate-700">Quick Add Variants</h3>
+          <p className="mb-3 text-xs text-slate-500">
+            Select colors and sizes to auto-generate all combinations
+          </p>
+          
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">Colors</label>
+              <select
+                multiple
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 max-h-40 overflow-y-auto"
+                onChange={(e) => {
+                  const selectedColors = Array.from(e.target.selectedOptions).map(o => o.value);
+                  addVariantsFromSelection(selectedColors, []);
+                }}
+              >
+                {colors.map((color) => (
+                  <option key={color.id} value={color.id}>
+                    {color.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">Sizes</label>
+              <select
+                multiple
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 max-h-40 overflow-y-auto"
+                onChange={(e) => {
+                  const selectedSizes = Array.from(e.target.selectedOptions).map(o => o.value);
+                  addVariantsFromSelection([], selectedSizes);
+                }}
+              >
+                {sizes.map((size) => (
+                  <option key={size.id} value={size.id}>
+                    {size.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="mt-3">
+            <label className="mb-2 block text-sm font-medium text-slate-700">Base Price</label>
+            <input
+              type="number"
+              step="0.01"
+              value={watch("price") || 0}
+              onChange={(e) => setValue("price", Number(e.target.value))}
+              className="w-full rounded-lg border p-2.5 text-sm"
+              placeholder="Default price for all variants"
+            />
+          </div>
+        </div>
+
         {fields.length === 0 ? (
           <div className="mt-4 rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
             No variants added yet. Click &quot;Add Variant&quot; to configure colors, sizes, and custom pricing.
@@ -562,7 +716,6 @@ const ProductForm = ({
         )}
       </div>
 
-      {/* Collections */}
       <div>
         <h2 className="text-xl font-semibold text-slate-900">Product Collections</h2>
         <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
