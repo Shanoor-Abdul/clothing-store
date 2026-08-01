@@ -1,3 +1,8 @@
+export interface Option {
+  id: string;
+  name: string;
+}
+
 export interface Product {
   id: string;
 

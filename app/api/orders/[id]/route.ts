@@ -17,7 +17,7 @@ export async function PATCH(
 
     const order = await prisma.order.findUnique({
       where: { id },
-      include: { address: true },
+      include: { address: true, items: true },
     });
 
     if (!order) {
@@ -74,7 +74,63 @@ export async function PATCH(
       );
     }
 
-    // 3. Edit Address Request (Before Shipping)
+    // 3. Edit Order Items Request (Before Shipping)
+    if (body.items && Array.isArray(body.items)) {
+      if (order.status === "SHIPPED" || order.status === "DELIVERED") {
+        return ApiResponse.error(
+          "Order items cannot be edited after order has shipped",
+          400
+        );
+      }
+
+      if (body.items.length === 0) {
+        return ApiResponse.error("Order must contain at least 1 item", 400);
+      }
+
+      // Delete existing order items
+      await prisma.orderItem.deleteMany({
+        where: { orderId: id },
+      });
+
+      // Calculate new totals
+      let newSubtotal = 0;
+      const newItems = body.items.map((item: any) => {
+        const itemPrice = Number(item.price || 0);
+        const itemQty = Number(item.quantity || 1);
+        newSubtotal += itemPrice * itemQty;
+
+        return {
+          orderId: id,
+          productId: item.productId,
+          productName: item.productName || item.name || "Product Item",
+          variantId: item.variantId ?? null,
+          color: item.color ?? null,
+          size: item.size ?? null,
+          quantity: itemQty,
+          price: itemPrice,
+        };
+      });
+
+      await prisma.orderItem.createMany({
+        data: newItems,
+      });
+
+      const updatedOrder = await prisma.order.update({
+        where: { id },
+        data: {
+          subtotal: newSubtotal,
+          total: newSubtotal + Number(order.shipping || 0),
+        },
+        include: { address: true, items: true },
+      });
+
+      return ApiResponse.success(
+        updatedOrder,
+        "Order items updated successfully"
+      );
+    }
+
+    // 4. Edit Address Request (Before Shipping)
     if (body.address) {
       if (order.status === "SHIPPED" || order.status === "DELIVERED") {
         return ApiResponse.error(

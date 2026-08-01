@@ -92,7 +92,10 @@ const BrandForm = ({
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit((data) => {
+        onSubmit(data);
+        reset(BRAND_DEFAULT_VALUES);
+      })}
       className="space-y-6 rounded-xl border bg-white p-6 shadow-sm"
     >
       <div>

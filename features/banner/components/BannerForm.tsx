@@ -64,7 +64,10 @@ const BannerForm = ({
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit((data) => {
+        onSubmit(data);
+        reset(BANNER_DEFAULT_VALUES);
+      })}
       className="rounded-xl border bg-white p-6 shadow-sm space-y-5"
     >
       <div>
