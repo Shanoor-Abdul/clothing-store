@@ -3,25 +3,33 @@ import { ProductFormData, VariantFormItem } from "./validation/product.schema";
 export const mapProductToForm = (
   product: any
 ): ProductFormData => ({
-  name: product.name,
-  slug: product.slug,
+  name: product.name ?? "",
+  slug: product.slug ?? "",
   description: product.description ?? "",
-  status: product.status,
-  sku: product.sku,
+  status: product.status ?? "DRAFT",
+  sku: product.sku ?? "",
   shortDescription: product.shortDescription ?? "",
-  categoryId: product.categoryId,
-  subcategoryId: product.subcategoryId ?? null,
-  brandId: product.brandId,
-  collectionIds: product.collectionIds ?? [],
+  categoryId: product.categoryId ?? "",
+  brandId: product.brandId ?? "",
+  collectionIds:
+    product.collections?.map(
+      (c: any) => c.collectionId ?? c.collection?.id ?? c.id
+    ) ?? [],
   material: product.material ?? "",
-  weight: product.weight,
-  price: Number(product.price),
+  weight: product.weight ? Number(product.weight) : undefined,
+  price: Number(product.price ?? 0),
   discount: product.discount ? Number(product.discount) : undefined,
-  sellingPrice: Number(product.sellingPrice),
-  isReturnable: product.isReturnable,
-  isFeatured: product.isFeatured,
-  isActive: product.isActive,
-  images: product.images ?? [],
+  sellingPrice: Number(product.sellingPrice ?? 0),
+  isReturnable: product.isReturnable ?? true,
+  isFeatured: product.isFeatured ?? false,
+  isActive: product.isActive ?? true,
+  images:
+    product.images?.map((img: any) => ({
+      id: img.id,
+      imageUrl: img.imageUrl,
+      altText: img.altText ?? "",
+      displayOrder: img.displayOrder ?? 0,
+    })) ?? [],
   variants:
     product.variants?.map(
       (v: any): VariantFormItem => ({
@@ -30,9 +38,9 @@ export const mapProductToForm = (
         sizeId: v.sizeId ?? null,
         sku: v.sku,
         barcode: v.barcode ?? null,
-        stock: Number(v.stock),
+        stock: Number(v.stock ?? 0),
         price: v.price ? Number(v.price) : null,
-        isActive: v.isActive,
+        isActive: v.isActive ?? true,
       })
     ) ?? [],
 });

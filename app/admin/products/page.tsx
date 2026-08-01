@@ -2,26 +2,20 @@
 
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useBrands } from "@/features/brand/hooks/useBrands";
 import { useCategories } from "@/features/category/hooks/useCategories";
 import { useColors } from "@/features/color/hooks/useColors";
 import { useSizes } from "@/features/size/hooks/useSizes";
+import { useCollections } from "@/features/collection/hooks/useCollections";
 import {
   useCreateProduct,
   useDeleteProduct,
   useProducts,
   useUpdateProduct,
 } from "@/features/products/hooks/useProducts";
-import {
-  createProductVariant,
-  deleteProductImage,
-  deleteProductVariant,
-  updateProductVariant,
-} from "@/features/products/api";
-import { Product, ProductVariant } from "@/features/products/types/product";
+import { Product } from "@/features/products/types/product";
 import { ProductFormData } from "@/features/products/validation/product.schema";
 import ProductForm from "@/features/products/components/ProductForm";
 import {
@@ -43,6 +37,7 @@ const ProductsPage = () => {
   const { data: brands = [] } = useBrands();
   const { data: colors = [] } = useColors();
   const { data: sizes = [] } = useSizes();
+  const { data: collections = [] } = useCollections();
 
   const subcategories = useMemo(() => {
     return categories.filter((c: any) => c.parentId).map((sub: any) => ({
@@ -62,50 +57,17 @@ const ProductsPage = () => {
 
   const handleSubmit = async (data: ProductFormData) => {
     try {
-      const { images, variants, ...productData } = data;
-
-      const processedImages = (images || []).map((img: any, index: number) => {
-        if (img instanceof File) {
-          return {
-            imageUrl: URL.createObjectURL(img),
-            altText: img.name,
-            displayOrder: index,
-          };
-        }
-        if (typeof img === "object" && img.imageUrl) {
-          return {
-            imageUrl: img.imageUrl,
-            altText: img.altText,
-            displayOrder: img.displayOrder || index,
-          };
-        }
-        return {
-          imageUrl: "",
-          altText: "",
-          displayOrder: index,
-        };
-      });
-
-      const finalProductData = {
-        ...productData,
-        images: processedImages,
-      };
-
       if (editingProduct) {
-        const updatedProduct = await updateMutation.mutateAsync({
+        await updateMutation.mutateAsync({
           id: editingProduct.id,
-          data: finalProductData,
+          data,
         });
-
-        if (updatedProduct) {
-          toast.success("Product updated successfully");
-        }
+        toast.success("Product updated successfully");
+        setEditingProduct(null);
       } else {
-        const createdProduct = await createMutation.mutateAsync(finalProductData);
-        if (createdProduct) {
-          toast.success("Product created successfully");
-          setEditingProduct(null);
-        }
+        await createMutation.mutateAsync(data);
+        toast.success("Product created successfully");
+        setEditingProduct(null);
       }
 
       await queryClient.invalidateQueries({ queryKey: PRODUCT_QUERY_KEY });
@@ -123,6 +85,7 @@ const ProductsPage = () => {
       await deleteMutation.mutateAsync(deleteProduct.id);
       setDeleteProduct(null);
       toast.success("Product deleted");
+      await queryClient.invalidateQueries({ queryKey: PRODUCT_QUERY_KEY });
     } catch (error) {
       console.error(error);
     }
@@ -132,29 +95,30 @@ const ProductsPage = () => {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Product Management</h1>
-        <p className="mt-2 text-slate-500">Manage all products</p>
+        <p className="mt-2 text-slate-500">Manage all store products, images, variants, and collections.</p>
       </div>
 
       <ProductForm
+        key={editingProduct ? editingProduct.id : "new-product-form"}
         onSubmit={handleSubmit}
         defaultValues={
           editingProduct ? mapProductToForm(editingProduct) : PRODUCT_DEFAULT_VALUES
         }
-        loading={
-          createMutation.isPending || updateMutation.isPending
-        }
+        loading={createMutation.isPending || updateMutation.isPending}
         categories={categories}
         subcategories={subcategories}
         brands={brands}
         colors={colors}
         sizes={sizes}
-        collections={[]}
+        collections={collections}
         editingProduct={editingProduct}
         onCancel={() => setEditingProduct(null)}
       />
 
       {isLoading ? (
-        <div className="rounded-xl border bg-white p-8 text-center">Loading...</div>
+        <div className="rounded-xl border bg-white p-8 text-center text-slate-500">
+          Loading product inventory...
+        </div>
       ) : (
         <ProductTable
           products={products}

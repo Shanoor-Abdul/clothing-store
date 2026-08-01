@@ -9,24 +9,12 @@ import Image from "next/image";
 import {
   ProductSchema,
   ProductFormData,
-  VariantFormItem,
 } from "../validation/product.schema";
 
 import { PRODUCT_DEFAULT_VALUES } from "../constants/product";
-
 import { generateSlug } from "@/utils";
 import { generateSku, calculateSellingPrice } from "../utils";
-import MultiSelect from "@/components/common/MultiSelect";
 import { Product } from "../types/product";
-import { uploadProductImage } from "../api";
-
-interface ImageFile {
-  file: File;
-  preview: string;
-  status: "uploading" | "uploaded" | "error";
-  id?: string;
-  imageUrl?: string;
-}
 
 interface Option {
   id: string;
@@ -101,7 +89,7 @@ const ProductForm = ({
   const categoryId = watch("categoryId");
   const price = watch("price");
   const discount = watch("discount");
-  const watchImages = watch("images");
+  const watchImages = watch("images") || [];
 
   const selectedCategory = categories.find(
     (category) => category.id === categoryId
@@ -133,28 +121,41 @@ const ProductForm = ({
   }, [price, discount, setValue]);
 
   const handleImageUpload = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (!files || files.length === 0) return;
 
       const currentImages = watch("images") || [];
-      const filesArray = Array.from(files);
-      
-      filesArray.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          const newImage = {
-            imageUrl: dataUrl,
-            altText: file.name,
-            displayOrder: (currentImages as any[]).filter(i => typeof i === "object" && "imageUrl" in i).length + 1,
+      const fileArray = Array.from(files);
+
+      const readPromises = fileArray.map((file) => {
+        return new Promise<{ imageUrl: string; altText: string; displayOrder: number }>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              resolve({
+                imageUrl: reader.result,
+                altText: file.name,
+                displayOrder: currentImages.length + 1,
+              });
+            } else {
+              reject(new Error("Failed to read image"));
+            }
           };
-          setValue("images", [...currentImages, newImage] as any, {
-            shouldDirty: true,
-          });
-        };
-        reader.readAsDataURL(file);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
       });
+
+      try {
+        const newImageObjs = await Promise.all(readPromises);
+        setValue("images", [...currentImages, ...newImageObjs], {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      } catch (err) {
+        console.error("Error reading uploaded images:", err);
+      }
 
       e.target.value = "";
     },
@@ -181,7 +182,7 @@ const ProductForm = ({
       ? `${generateSku(
           categories.find((c) => c.id === cat)?.name || "PROD",
           name
-        )}-${String(currentVariants.length + 1).padStart(2, "0")}`
+        )}-VAR-${String(currentVariants.length + 1).padStart(2, "0")}`
       : `VAR-${Date.now().toString().slice(-4)}`;
 
     append({
@@ -279,8 +280,6 @@ const ProductForm = ({
     return "";
   };
 
-  const isFile = (img: unknown): boolean => img instanceof File;
-
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
@@ -288,16 +287,16 @@ const ProductForm = ({
     >
       {/* Basic Information */}
       <div>
-        <h2 className="text-xl font-semibold">Basic Information</h2>
+        <h2 className="text-xl font-semibold text-slate-900">Basic Information</h2>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="mb-2 block">Product Name</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Product Name</label>
           <input
             {...register("name")}
-            placeholder="Product Name"
-            className="w-full rounded-lg border p-3"
+            placeholder="e.g. Wedding Men Suit"
+            className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
           />
           {errors.name && (
             <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>
@@ -305,10 +304,10 @@ const ProductForm = ({
         </div>
 
         <div>
-          <label className="mb-2 block">Slug</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Slug</label>
           <input
             {...register("slug")}
-            className="w-full rounded-lg border bg-slate-100 p-3"
+            className="w-full rounded-lg border border-slate-200 bg-slate-100 p-3 text-sm text-slate-600"
             readOnly
           />
           {errors.slug && (
@@ -317,10 +316,10 @@ const ProductForm = ({
         </div>
 
         <div>
-          <label className="mb-2 block">SKU</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">SKU</label>
           <input
             {...register("sku")}
-            className="w-full rounded-lg border bg-slate-100 p-3"
+            className="w-full rounded-lg border border-slate-200 bg-slate-100 p-3 text-sm text-slate-600"
             readOnly
           />
           {errors.sku && (
@@ -329,10 +328,10 @@ const ProductForm = ({
         </div>
 
         <div>
-          <label className="mb-2 block">Category</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Category</label>
           <select
             {...register("categoryId")}
-            className="w-full rounded-lg border p-3"
+            className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
           >
             <option value="">Select Category</option>
             {categories.map((category) => (
@@ -372,7 +371,7 @@ const ProductForm = ({
           <label className="mb-2 block">Brand</label>
           <select
             {...register("brandId")}
-            className="w-full rounded-lg border p-3"
+            className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
           >
             <option value="">Select Brand</option>
             {brands.map((brand) => (
@@ -384,10 +383,10 @@ const ProductForm = ({
         </div>
 
         <div>
-          <label className="mb-2 block">Status</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Status</label>
           <select
             {...register("status")}
-            className="w-full rounded-lg border p-3"
+            className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
           >
             <option value="DRAFT">Draft</option>
             <option value="PUBLISHED">Published</option>
@@ -398,20 +397,22 @@ const ProductForm = ({
       </div>
 
       <div>
-        <label className="mb-2 block">Short Description</label>
+        <label className="mb-2 block text-sm font-semibold text-slate-700">Short Description</label>
         <textarea
-          rows={3}
+          rows={2}
           {...register("shortDescription")}
-          className="w-full rounded-lg border p-3"
+          placeholder="Brief summary of the product..."
+          className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
         />
       </div>
 
       <div>
-        <label className="mb-2 block">Description</label>
+        <label className="mb-2 block text-sm font-semibold text-slate-700">Description</label>
         <textarea
-          rows={6}
+          rows={4}
           {...register("description")}
-          className="w-full rounded-lg border p-3"
+          placeholder="Full product specification and details..."
+          className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
         />
         {errors.description && (
           <p className="mt-1 text-sm text-red-500">
@@ -422,54 +423,54 @@ const ProductForm = ({
 
       {/* Pricing */}
       <div>
-        <h2 className="text-xl font-semibold">Pricing</h2>
+        <h2 className="text-xl font-semibold text-slate-900">Pricing & Discount</h2>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
-          <label className="mb-2 block">Price</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Price ($)</label>
           <input
             type="number"
             step="0.01"
             {...register("price")}
-            className="w-full rounded-lg border p-3"
+            className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
           />
         </div>
 
         <div>
-          <label className="mb-2 block">Discount</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Discount ($)</label>
           <input
             type="number"
             step="0.01"
             {...register("discount")}
-            className="w-full rounded-lg border p-3"
+            className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
           />
         </div>
 
         <div>
-          <label className="mb-2 block">Selling Price</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Selling Price ($)</label>
           <input
             type="number"
             step="0.01"
             readOnly
             {...register("sellingPrice")}
-            className="w-full rounded-lg border bg-slate-100 p-3"
+            className="w-full rounded-lg border border-slate-200 bg-slate-100 p-3 text-sm text-slate-600"
           />
         </div>
       </div>
 
-      {/* Image Upload - inside form */}
+      {/* Multiple Image Upload */}
       <div>
-        <h2 className="text-xl font-semibold">Product Images</h2>
+        <h2 className="text-xl font-semibold text-slate-900">Product Images</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Upload product images. First image will be the main display image.
+          Upload one or multiple images for this product. Selected images will be uploaded to the server upon saving.
         </p>
 
         <div className="mt-4">
-          <label className="flex cursor-pointer items-center justify-center gap-3 rounded-lg border-2 border-dashed border-slate-300 p-6 transition hover:border-blue-400 hover:bg-blue-50/50">
+          <label className="flex cursor-pointer items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-300 p-6 transition hover:border-blue-500 hover:bg-blue-50/50">
             <Upload size={24} className="text-slate-400" />
-            <span className="text-sm font-medium text-slate-600">
-              Click to upload images
+            <span className="text-sm font-semibold text-slate-700">
+              Click to select multiple image files
             </span>
             <input
               type="file"
@@ -481,48 +482,57 @@ const ProductForm = ({
           </label>
         </div>
 
-        {(watchImages || []).length > 0 && (
-          <div className="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-5 lg:grid-cols-6">
-            {(watchImages || []).map((img: unknown, index: number) => (
-              <div key={index} className="group relative aspect-square">
-                <Image
-                  src={imageUrl(img)}
-                  alt={`Product image ${index + 1}`}
-                  fill
-                  className="rounded-lg object-cover"
-                  sizes="100px"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeImage(index)}
-                  className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition group-hover:opacity-100"
-                >
-                  <X size={12} />
-                </button>
-                {index === 0 && (
-                  <span className="absolute bottom-1 left-1 rounded-md bg-black/60 px-2 py-0.5 text-[10px] text-white">
-                    Main
-                  </span>
-                )}
-              </div>
-            ))}
+        {watchImages.length > 0 && (
+          <div className="mt-4 grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-6">
+            {watchImages.map((img: unknown, index: number) => {
+              const src = imageUrl(img);
+              return (
+                <div key={index} className="group relative aspect-square rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+                  {src ? (
+                    <Image
+                      src={src}
+                      alt={`Product image ${index + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="150px"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                      No Image
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-white shadow hover:bg-red-700 transition"
+                  >
+                    <X size={14} />
+                  </button>
+                  {index === 0 && (
+                    <span className="absolute bottom-1 left-1 rounded-md bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                      Main
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Variants Section with multiselect color/size */}
+      {/* Product Variants Section */}
       <div>
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Product Variants</h2>
+            <h2 className="text-xl font-semibold text-slate-900">Product Variants</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Add color, size, stock, and pricing variants.
+              Add color, size, stock, and custom pricing overrides for specific variants.
             </p>
           </div>
           <button
             type="button"
-            onClick={() => addVariant()}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            onClick={addVariant}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
           >
             <Plus size={18} />
             Add Variant
@@ -587,31 +597,31 @@ const ProductForm = ({
         </div>
 
         {fields.length === 0 ? (
-          <div className="mt-4 rounded-lg border border-dashed p-10 text-center text-slate-500">
-            No variants added. Click "Add Variant" to create one, or use Quick Add above.
+          <div className="mt-4 rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+            No variants added yet. Click &quot;Add Variant&quot; to configure colors, sizes, and custom pricing.
           </div>
         ) : (
           <div className="mt-4 space-y-4">
             {fields.map((field, index) => (
               <div
                 key={field.id}
-                className="rounded-xl border border-slate-200 bg-slate-50/50 p-5"
+                className="rounded-xl border border-slate-200 bg-slate-50/70 p-5 shadow-sm"
               >
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="font-semibold text-slate-800">
-                    Variant {index + 1}
+                <div className="mb-4 flex items-center justify-between border-b pb-3">
+                  <h3 className="font-bold text-slate-800">
+                    Variant #{index + 1}
                   </h3>
                   <button
                     type="button"
                     onClick={() => remove(index)}
-                    className="rounded-lg bg-red-500 p-2 text-white hover:bg-red-600"
+                    className="flex items-center gap-1 rounded-lg bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-200 transition"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
+                    Remove
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-                  {/* Hidden id for editing */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {field.id && (
                     <input
                       type="hidden"
@@ -620,49 +630,19 @@ const ProductForm = ({
                   )}
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium">SKU</label>
+                    <label className="mb-1 block text-xs font-semibold text-slate-700">Variant SKU</label>
                     <input
                       {...register(`variants.${index}.sku`)}
-                      className="w-full rounded-lg border bg-slate-100 p-2.5 text-sm"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-100 p-2.5 text-sm text-slate-600"
                       readOnly
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Barcode</label>
-                    <input
-                      {...register(`variants.${index}.barcode`)}
-                      className="w-full rounded-lg border p-2.5 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">Stock</label>
-                    <input
-                      type="number"
-                      {...register(`variants.${index}.stock`)}
-                      className="w-full rounded-lg border p-2.5 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">
-                      Price (override)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      {...register(`variants.${index}.price`)}
-                      className="w-full rounded-lg border p-2.5 text-sm"
-                      placeholder="Leave empty for base price"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">Color</label>
+                    <label className="mb-1 block text-xs font-semibold text-slate-700">Color</label>
                     <select
                       {...register(`variants.${index}.colorId`)}
-                      className="w-full rounded-lg border p-2.5 text-sm"
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-sm bg-white outline-none focus:border-blue-500"
                     >
                       <option value="">Select Color</option>
                       {colors.map((color) => (
@@ -674,10 +654,10 @@ const ProductForm = ({
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Size</label>
+                    <label className="mb-1 block text-xs font-semibold text-slate-700">Size</label>
                     <select
                       {...register(`variants.${index}.sizeId`)}
-                      className="w-full rounded-lg border p-2.5 text-sm"
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-sm bg-white outline-none focus:border-blue-500"
                     >
                       <option value="">Select Size</option>
                       {sizes.map((size) => (
@@ -687,13 +667,45 @@ const ProductForm = ({
                       ))}
                     </select>
                   </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-700">Stock Quantity</label>
+                    <input
+                      type="number"
+                      {...register(`variants.${index}.stock`)}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-700">
+                      Variant Custom Price ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Default (uses base price)"
+                      {...register(`variants.${index}.price`)}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-700">Barcode</label>
+                    <input
+                      {...register(`variants.${index}.barcode`)}
+                      placeholder="Optional barcode"
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none focus:border-blue-500"
+                    />
+                  </div>
                 </div>
 
-                <div className="mt-3">
-                  <label className="flex items-center gap-2 text-sm">
+                <div className="mt-3 pt-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer">
                     <input
                       type="checkbox"
                       {...register(`variants.${index}.isActive`)}
+                      className="h-4 w-4 text-blue-600"
                     />
                     Active Variant
                   </label>
@@ -705,17 +717,18 @@ const ProductForm = ({
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold">Product Collections</h2>
-        <div className="mt-4 grid grid-cols-3 gap-3">
+        <h2 className="text-xl font-semibold text-slate-900">Product Collections</h2>
+        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
           {collections.map((collection) => (
             <label
               key={collection.id}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-sm font-semibold text-slate-700 cursor-pointer"
             >
               <input
                 type="checkbox"
                 value={collection.id}
                 {...register("collectionIds")}
+                className="h-4 w-4 text-blue-600"
               />
               <span>{collection.name}</span>
             </label>
@@ -723,69 +736,69 @@ const ProductForm = ({
         </div>
       </div>
 
-      {/* Product Details */}
+      {/* Details */}
       <div>
-        <h2 className="text-xl font-semibold">Product Details</h2>
+        <h2 className="text-xl font-semibold text-slate-900">Product Attributes</h2>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="mb-2 block">Material</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Material</label>
           <input
             {...register("material")}
-            placeholder="Cotton, Silk..."
-            className="w-full rounded-lg border p-3"
+            placeholder="e.g. Cotton, Silk, Leather"
+            className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
           />
         </div>
 
         <div>
-          <label className="mb-2 block">Weight (Kg)</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Weight (Kg)</label>
           <input
             type="number"
             step="0.01"
             {...register("weight")}
-            className="w-full rounded-lg border p-3"
+            className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
           />
         </div>
       </div>
 
       {/* Settings */}
       <div>
-        <h2 className="text-xl font-semibold">Product Settings</h2>
-        <div className="mt-5 grid grid-cols-3 gap-6">
-          <label className="flex items-center gap-3">
-            <input type="checkbox" {...register("isReturnable")} />
-            <span>Returnable</span>
+        <h2 className="text-xl font-semibold text-slate-900">Settings</h2>
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <label className="flex items-center gap-3 text-sm font-semibold text-slate-700 cursor-pointer">
+            <input type="checkbox" {...register("isReturnable")} className="h-4 w-4 text-blue-600" />
+            <span>Returnable Item</span>
           </label>
 
-          <label className="flex items-center gap-3">
-            <input type="checkbox" {...register("isFeatured")} />
+          <label className="flex items-center gap-3 text-sm font-semibold text-slate-700 cursor-pointer">
+            <input type="checkbox" {...register("isFeatured")} className="h-4 w-4 text-blue-600" />
             <span>Featured Product</span>
           </label>
 
-          <label className="flex items-center gap-3">
-            <input type="checkbox" {...register("isActive")} />
-            <span>Active</span>
+          <label className="flex items-center gap-3 text-sm font-semibold text-slate-700 cursor-pointer">
+            <input type="checkbox" {...register("isActive")} className="h-4 w-4 text-blue-600" />
+            <span>Active Product</span>
           </label>
         </div>
       </div>
 
-      {/* Submit */}
+      {/* Submit Buttons */}
       <div className="flex items-center gap-4 border-t pt-6">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-slate-300 px-8 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+            className="rounded-xl border border-slate-300 px-6 py-3 font-semibold text-slate-700 hover:bg-slate-100 transition"
           >
-            Cancel
+            Cancel Edit
           </button>
         )}
 
         <button
           type="submit"
           disabled={loading}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-3 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3 font-bold text-white hover:bg-blue-700 transition disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading && <Loader2 className="animate-spin" size={18} />}
           {loading

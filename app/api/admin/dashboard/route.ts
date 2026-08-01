@@ -46,7 +46,7 @@ export async function GET() {
         },
         recentOrders,
         ordersByStatus: ordersByStatus.reduce(
-          (acc, curr) => {
+          (acc: Record<string, number>, curr: { status: string; _count: { id: number } }) => {
             acc[curr.status] = curr._count.id;
             return acc;
           },

@@ -1,6 +1,27 @@
 import prisma from "@/lib/prisma";
-
 import { ProductFormData } from "../validation/product.schema";
+
+const productIncludeConfig = {
+  category: true,
+  brand: true,
+  images: {
+    orderBy: {
+      displayOrder: "asc" as const,
+    },
+  },
+  videos: true,
+  variants: {
+    include: {
+      color: true,
+      size: true,
+    },
+  },
+  collections: {
+    include: {
+      collection: true,
+    },
+  },
+};
 
 export class ProductService {
   static async getAll() {
@@ -27,6 +48,7 @@ export class ProductService {
           },
         },
       },
+      include: productIncludeConfig,
       orderBy: {
         createdAt: "desc",
       },
@@ -49,6 +71,7 @@ export class ProductService {
           },
         },
       },
+      include: productIncludeConfig,
       orderBy: {
         createdAt: "desc",
       },
@@ -60,83 +83,68 @@ export class ProductService {
       where: {
         id,
       },
-      include: {
-        category: true,
-        subcategory: true,
-        brand: true,
-        images: true,
-        videos: true,
-        variants: {
-          include: {
-            color: true,
-            size: true,
-          },
-        },
-        collections: {
-          include: {
-            collection: true,
-          },
-        },
-      },
+      include: productIncludeConfig,
     });
   }
 
-  static async create(
-    data: ProductFormData & { images?: Array<{ imageUrl: string; altText?: string; displayOrder?: number }> }
-  ) {
-    const exists =
-      await prisma.product.findFirst({
-        where: {
-          OR: [
-            {
-              sku: data.sku,
-            },
-            {
-              slug: data.slug,
-            },
-          ],
-        },
-      });
+  static async create(data: ProductFormData) {
+    const exists = await prisma.product.findFirst({
+      where: {
+        OR: [{ sku: data.sku }, { slug: data.slug }],
+      },
+    });
 
     if (exists) {
-      throw new Error(
-        "Product already exists."
-      );
+      throw new Error("Product already exists.");
     }
 
-    const product = await prisma.product.create({
+    const formattedImages: { imageUrl: string; altText: string; displayOrder: number }[] = [];
+    if (data.images && data.images.length > 0) {
+      data.images.forEach((img: any, idx: number) => {
+        const url = typeof img === "string" ? img : img?.imageUrl;
+        if (url) {
+          formattedImages.push({
+            imageUrl: url,
+            altText: typeof img === "object" && img?.altText ? img.altText : `${data.name}-${idx + 1}`,
+            displayOrder: typeof img === "object" && typeof img?.displayOrder === "number" ? img.displayOrder : idx + 1,
+          });
+        }
+      });
+    }
+
+    const formattedVariants: { sku: string; stock: number; barcode: string | null; price: number | null; isActive: boolean; colorId: string | null; sizeId: string | null }[] = [];
+    if (data.variants && data.variants.length > 0) {
+      data.variants.forEach((v: any) => {
+        if (v.sku) {
+          formattedVariants.push({
+            sku: v.sku,
+            stock: Number(v.stock || 0),
+            barcode: v.barcode || null,
+            price: v.price ? Number(v.price) : null,
+            isActive: v.isActive ?? true,
+            colorId: v.colorId || null,
+            sizeId: v.sizeId || null,
+          });
+        }
+      });
+    }
+
+    return prisma.product.create({
       data: {
         name: data.name,
         slug: data.slug,
         sku: data.sku,
-
         description: data.description,
-        shortDescription:
-          data.shortDescription || null,
-
+        shortDescription: data.shortDescription || null,
         price: data.price,
-        discount:
-          data.discount || null,
-        sellingPrice:
-          data.sellingPrice,
-
-        weight:
-          data.weight || null,
-
-        material:
-          data.material || null,
-
+        discount: data.discount || null,
+        sellingPrice: data.sellingPrice,
+        weight: data.weight || null,
+        material: data.material || null,
         status: data.status,
-
-        isReturnable:
-          data.isReturnable,
-
-        isFeatured:
-          data.isFeatured,
-
-        isActive:
-          data.isActive,
-
+        isReturnable: data.isReturnable,
+        isFeatured: data.isFeatured,
+        isActive: data.isActive,
         category: {
           connect: {
             id: data.categoryId,
@@ -158,17 +166,24 @@ export class ProductService {
               },
             }
           : undefined,
-
+        images:
+          formattedImages.length > 0
+            ? {
+                create: formattedImages,
+              }
+            : undefined,
+        variants:
+          formattedVariants.length > 0
+            ? {
+                create: formattedVariants,
+              }
+            : undefined,
         collections: {
           create:
-            data.collectionIds?.map(
-              (
-                collectionId
-              ) => ({
-                collection: {
-                  connect: {
-                    id: collectionId,
-                  },
+            data.collectionIds?.map((collectionId) => ({
+              collection: {
+                connect: {
+                  id: collectionId,
                 },
               })
             ) ?? [],
@@ -211,6 +226,8 @@ export class ProductService {
           orderBy: {
             displayOrder: "asc",
           },
+              },
+            })) ?? [],
         },
         variants: {
           include: {
@@ -219,37 +236,29 @@ export class ProductService {
           },
         },
       },
+      include: productIncludeConfig,
     });
-
-    return product;
   }
 
-  static async update(
-    id: string,
-    data: ProductFormData
-  ) {
-    const exists =
-      await prisma.product.findFirst({
-        where: {
-          id: {
-            not: id,
-          },
-          OR: [
-            {
-              sku: data.sku,
-            },
-            {
-              slug: data.slug,
-            },
-          ],
+  static async update(id: string, data: ProductFormData) {
+    const exists = await prisma.product.findFirst({
+      where: {
+        id: {
+          not: id,
         },
-      });
+        OR: [{ sku: data.sku }, { slug: data.slug }],
+      },
+    });
 
     if (exists) {
-      throw new Error(
-        "Product already exists."
-      );
+      throw new Error("Product with this SKU or Slug already exists.");
     }
+
+    await prisma.productCollection.deleteMany({
+      where: {
+        productId: id,
+      },
+    });
 
     await prisma.productImage.deleteMany({
       where: {
@@ -257,11 +266,42 @@ export class ProductService {
       },
     });
 
-    await prisma.productCollection.deleteMany({
+    await prisma.productVariant.deleteMany({
       where: {
         productId: id,
       },
     });
+
+    const formattedImages: { imageUrl: string; altText: string; displayOrder: number }[] = [];
+    if (data.images && data.images.length > 0) {
+      data.images.forEach((img: any, idx: number) => {
+        const url = typeof img === "string" ? img : img?.imageUrl;
+        if (url) {
+          formattedImages.push({
+            imageUrl: url,
+            altText: typeof img === "object" && img?.altText ? img.altText : `${data.name}-${idx + 1}`,
+            displayOrder: typeof img === "object" && typeof img?.displayOrder === "number" ? img.displayOrder : idx + 1,
+          });
+        }
+      });
+    }
+
+    const formattedVariants: { sku: string; stock: number; barcode: string | null; price: number | null; isActive: boolean; colorId: string | null; sizeId: string | null }[] = [];
+    if (data.variants && data.variants.length > 0) {
+      data.variants.forEach((v: any) => {
+        if (v.sku) {
+          formattedVariants.push({
+            sku: v.sku,
+            stock: Number(v.stock || 0),
+            barcode: v.barcode || null,
+            price: v.price ? Number(v.price) : null,
+            isActive: v.isActive ?? true,
+            colorId: v.colorId || null,
+            sizeId: v.sizeId || null,
+          });
+        }
+      });
+    }
 
     return prisma.product.update({
       where: {
@@ -271,34 +311,17 @@ export class ProductService {
         name: data.name,
         slug: data.slug,
         sku: data.sku,
-
         description: data.description,
-        shortDescription:
-          data.shortDescription || null,
-
+        shortDescription: data.shortDescription || null,
         price: data.price,
-        discount:
-          data.discount || null,
-        sellingPrice:
-          data.sellingPrice,
-
-        weight:
-          data.weight || null,
-
-        material:
-          data.material || null,
-
+        discount: data.discount || null,
+        sellingPrice: data.sellingPrice,
+        weight: data.weight || null,
+        material: data.material || null,
         status: data.status,
-
-        isReturnable:
-          data.isReturnable,
-
-        isFeatured:
-          data.isFeatured,
-
-        isActive:
-          data.isActive,
-
+        isReturnable: data.isReturnable,
+        isFeatured: data.isFeatured,
+        isActive: data.isActive,
         category: {
           connect: {
             id: data.categoryId,
@@ -324,17 +347,24 @@ export class ProductService {
           : {
               disconnect: true,
             },
-
+        images:
+          formattedImages.length > 0
+            ? {
+                create: formattedImages,
+              }
+            : undefined,
+        variants:
+          formattedVariants.length > 0
+            ? {
+                create: formattedVariants,
+              }
+            : undefined,
         collections: {
           create:
-            data.collectionIds?.map(
-              (
-                collectionId
-              ) => ({
-                collection: {
-                  connect: {
-                    id: collectionId,
-                  },
+            data.collectionIds?.map((collectionId) => ({
+              collection: {
+                connect: {
+                  id: collectionId,
                 },
               })
             ) ?? [],
@@ -366,6 +396,8 @@ export class ProductService {
           orderBy: {
             displayOrder: "asc",
           },
+              },
+            })) ?? [],
         },
         variants: {
           include: {
@@ -374,12 +406,11 @@ export class ProductService {
           },
         },
       },
+      include: productIncludeConfig,
     });
   }
 
-  static async delete(
-    id: string
-  ) {
+  static async delete(id: string) {
     return prisma.product.delete({
       where: {
         id,
