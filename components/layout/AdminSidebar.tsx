@@ -12,6 +12,7 @@ import {
   Ruler,
   Image,
   ShoppingCart,
+  DollarSign,
   Users,
   Settings,
 } from "lucide-react";
@@ -62,6 +63,11 @@ const menuItems = [
     title: "Orders",
     href: "/admin/orders",
     icon: ShoppingCart,
+  },
+  {
+    title: "Revenue & Analytics",
+    href: "/admin/revenue",
+    icon: DollarSign,
   },
   {
     title: "Customers",

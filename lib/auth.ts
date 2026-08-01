@@ -20,8 +20,8 @@ export const ACCESS_TOKEN_COOKIE = "cs_access_token";
 export const REFRESH_TOKEN_COOKIE = "cs_refresh_token";
 export const FIREBASE_TOKEN_COOKIE = "token";
 
-export const ACCESS_EXPIRES = "15m";
-export const REFRESH_EXPIRES = "7d";
+export const ACCESS_EXPIRES = "7d";
+export const REFRESH_EXPIRES = "30d";
 
 export const signAccessToken = (payload: AuthPayload): string => {
   return jwt.sign(payload, ACCESS_SECRET, {
@@ -62,7 +62,7 @@ export const setAuthCookies = async (
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 15,
+    maxAge: 60 * 60 * 24 * 7,
   });
 
   cookieStore.set(REFRESH_TOKEN_COOKIE, refreshToken, {
@@ -70,7 +70,7 @@ export const setAuthCookies = async (
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: 60 * 60 * 24 * 30,
   });
 };
 
@@ -82,7 +82,7 @@ export const setFirebaseCookie = async (idToken: string) => {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: 60 * 60 * 24 * 30,
   });
 };
 

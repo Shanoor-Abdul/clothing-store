@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Eye, RefreshCw, ShoppingBag, CreditCard, Truck, User, MapPin, PackageCheck } from "lucide-react";
+import { Search, Eye, RefreshCw, ShoppingBag, CreditCard, User, MapPin, Calendar, Maximize2, X } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import { formatCurrency } from "@/utils";
@@ -69,8 +69,11 @@ const statusColors: Record<string, string> = {
 export default function AdminOrdersPage() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [dateFilter, setDateFilter] = useState<string>("ALL");
+  const [customMonth, setCustomMonth] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   const { data: orders = [], isLoading, isRefetching } = useQuery({
     queryKey: ["admin", "orders", statusFilter],
@@ -92,61 +95,135 @@ export default function AdminOrdersPage() {
     },
   });
 
-  const filteredOrders = orders.filter((o) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      o.orderNumber.toLowerCase().includes(q) ||
-      (o.user?.name && o.user.name.toLowerCase().includes(q)) ||
-      (o.user?.email && o.user.email.toLowerCase().includes(q))
-    );
-  });
+  // Filter orders by search term AND date range
+  const filteredOrders = useMemo(() => {
+    return orders.filter((o) => {
+      // 1. Search Query Filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesSearch =
+          o.orderNumber.toLowerCase().includes(q) ||
+          (o.user?.name && o.user.name.toLowerCase().includes(q)) ||
+          (o.user?.email && o.user.email.toLowerCase().includes(q));
+        if (!matchesSearch) return false;
+      }
+
+      // 2. Date Filter
+      const orderDate = new Date(o.createdAt);
+      const now = new Date();
+
+      if (dateFilter === "TODAY") {
+        const isToday =
+          orderDate.getDate() === now.getDate() &&
+          orderDate.getMonth() === now.getMonth() &&
+          orderDate.getFullYear() === now.getFullYear();
+        if (!isToday) return false;
+      } else if (dateFilter === "7DAYS") {
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        if (orderDate < sevenDaysAgo) return false;
+      } else if (dateFilter === "THIS_MONTH") {
+        const isThisMonth =
+          orderDate.getMonth() === now.getMonth() &&
+          orderDate.getFullYear() === now.getFullYear();
+        if (!isThisMonth) return false;
+      } else if (dateFilter === "CUSTOM_MONTH" && customMonth) {
+        const [yearStr, monthStr] = customMonth.split("-");
+        const matchYear = orderDate.getFullYear() === parseInt(yearStr, 10);
+        const matchMonth = orderDate.getMonth() + 1 === parseInt(monthStr, 10);
+        if (!matchYear || !matchMonth) return false;
+      }
+
+      return true;
+    });
+  }, [orders, searchQuery, dateFilter, customMonth]);
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Orders Management</h1>
-          <p className="mt-1 text-slate-500">Track and manage customer orders and shipment statuses.</p>
+          <p className="mt-1 text-slate-500">Track, filter, and manage customer orders and shipment statuses.</p>
         </div>
 
         <button
           onClick={() => queryClient.invalidateQueries({ queryKey: ["admin", "orders"] })}
           disabled={isRefetching}
-          className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+          className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition shadow-sm"
         >
           <RefreshCw size={16} className={isRefetching ? "animate-spin text-blue-600" : ""} />
           {isRefetching ? "Refreshing..." : "Refresh Feed"}
         </button>
       </div>
 
-      {/* Filter Tabs & Search Bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2 rounded-xl bg-slate-200/60 p-1.5">
-          {["ALL", "PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"].map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
-                statusFilter === status
-                  ? "bg-slate-900 text-white shadow"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              {status}
-            </button>
-          ))}
+      {/* Date Range & Status Filters Toolbar */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+        {/* Date Quick Filters */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+            <Calendar size={16} className="text-blue-600" /> Filter Date Range:
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { id: "ALL", label: "All Time" },
+              { id: "TODAY", label: "Today" },
+              { id: "7DAYS", label: "Last 7 Days" },
+              { id: "THIS_MONTH", label: "This Month" },
+              { id: "CUSTOM_MONTH", label: "Select Month" },
+            ].map((df) => (
+              <button
+                key={df.id}
+                type="button"
+                onClick={() => setDateFilter(df.id)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                  dateFilter === df.id
+                    ? "bg-blue-600 text-white shadow"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                {df.label}
+              </button>
+            ))}
+
+            {dateFilter === "CUSTOM_MONTH" && (
+              <input
+                type="month"
+                value={customMonth}
+                onChange={(e) => setCustomMonth(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-1 text-xs outline-none focus:border-blue-500 font-bold"
+              />
+            )}
+          </div>
         </div>
 
-        <div className="relative min-w-[260px]">
-          <input
-            type="text"
-            placeholder="Search by order #, customer, email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500"
-          />
-          <Search size={18} className="absolute left-3 top-3 text-slate-400" />
+        {/* Status Filter Tabs & Search Bar */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-1.5 rounded-xl bg-slate-100 p-1">
+            {["ALL", "PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"].map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  statusFilter === status
+                    ? "bg-slate-900 text-white shadow"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative min-w-[260px]">
+            <input
+              type="text"
+              placeholder="Search by order #, customer, email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-xs outline-none focus:border-blue-500"
+            />
+            <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
+          </div>
         </div>
       </div>
 
@@ -280,8 +357,9 @@ export default function AdminOrdersPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between border-b pb-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-                  <ShoppingBag size={16} className="text-blue-600" /> Purchased Product Items ({selectedOrder.items.length})
+                  <ShoppingBag size={16} className="text-blue-600" /> Purchased Items ({selectedOrder.items.length})
                 </h4>
+                <span className="text-[11px] text-slate-400">Click image thumbnail to enlarge</span>
               </div>
 
               <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
@@ -291,20 +369,29 @@ export default function AdminOrdersPage() {
                     className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-sm hover:border-slate-300 transition gap-4"
                   >
                     <div className="flex items-center gap-3">
-                      {/* Product Thumbnail */}
-                      <div className="h-14 w-14 shrink-0 rounded-lg border bg-slate-50 p-1 flex items-center justify-center overflow-hidden">
+                      {/* Product Thumbnail with LightBox Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => item.productImage && setLightboxImage(item.productImage)}
+                        className="group relative h-14 w-14 shrink-0 rounded-lg border bg-slate-50 p-1 flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition"
+                      >
                         {item.productImage ? (
-                          <img
-                            src={item.productImage}
-                            alt={item.productName}
-                            className="max-h-full max-w-full object-contain"
-                          />
+                          <>
+                            <img
+                              src={item.productImage}
+                              alt={item.productName}
+                              className="max-h-full max-w-full object-contain"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition">
+                              <Maximize2 size={14} />
+                            </div>
+                          </>
                         ) : (
                           <div className="text-[10px] font-bold text-slate-400 text-center">
                             No Img
                           </div>
                         )}
-                      </div>
+                      </button>
 
                       {/* Details */}
                       <div>
@@ -352,6 +439,28 @@ export default function AdminOrdersPage() {
                 <span className="text-sky-400">{formatCurrency(Number(selectedOrder.total))}</span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* High-Res Image LightBox Zoom Modal */}
+      {lightboxImage && (
+        <div
+          onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 cursor-pointer"
+        >
+          <div className="relative max-h-[85vh] max-w-[85vw] overflow-hidden rounded-2xl bg-white p-3 shadow-2xl flex items-center justify-center">
+            <img
+              src={lightboxImage}
+              alt="High resolution product view"
+              className="max-h-[80vh] max-w-[80vw] object-contain rounded-xl"
+            />
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white shadow hover:bg-rose-600 transition"
+            >
+              <X size={16} />
+            </button>
           </div>
         </div>
       )}
