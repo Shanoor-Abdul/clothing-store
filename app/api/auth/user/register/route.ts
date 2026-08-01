@@ -1,6 +1,13 @@
 import { NextRequest } from "next/server";
-
+import bcrypt from "bcryptjs";
 import { ApiResponse } from "@/lib/api-response";
+import prisma from "@/lib/prisma";
+import {
+  setAuthCookies,
+  signAccessToken,
+  signRefreshToken,
+  setFirebaseCookie,
+} from "@/lib/auth";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -10,12 +17,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const name = String(body.name ?? "").trim();
-    const email = body.email
-      ? String(body.email).trim().toLowerCase()
-      : null;
-    const mobile = body.mobile
-      ? String(body.mobile).trim()
-      : null;
+    const email = body.email ? String(body.email).trim().toLowerCase() : null;
+    const mobile = body.mobile ? String(body.mobile).trim() : null;
     const rawPassword = String(body.password ?? "");
 
     if (!name) {
@@ -26,10 +29,6 @@ export async function POST(request: NextRequest) {
       return ApiResponse.error("Email is required", 400);
     }
 
-    if (!mobile) {
-      return ApiResponse.error("Mobile is required", 400);
-    }
-
     if (rawPassword.length < 6) {
       return ApiResponse.error(
         "Password must be at least 6 characters",
@@ -37,48 +36,74 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let userCredential;
-    try {
-      userCredential = await createUserWithEmailAndPassword(auth, email, rawPassword);
-    } catch (error: any) {
-      if (error.code === "auth/email-already-in-use") {
-        return ApiResponse.error("Account already exists", 409);
-      }
-      return ApiResponse.error("Registration failed", 500);
+    // Check if user already exists in PostgreSQL DB
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email },
+          ...(mobile ? [{ mobile }] : []),
+        ],
+      },
+    });
+
+    if (existingUser) {
+      return ApiResponse.error("User with this email or mobile already exists", 409);
     }
 
-    const user = userCredential.user;
-    const uid = user.uid;
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        mobile,
+        password: hashedPassword,
+        isActive: true,
+      },
+    });
 
     const payload = {
-      id: uid,
-      name,
-      email,
-      mobile,
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      mobile: newUser.mobile,
       role: "USER" as const,
     };
 
-    await setDoc(doc(db, "users", uid), {
-      name,
-      email,
-      mobile,
-      role: "USER",
-      createdAt: new Date(),
-      isActive: true,
-    });
+    const accessToken = signAccessToken(payload);
+    const refreshToken = signRefreshToken(payload);
 
-    const idToken = await user.getIdToken();
+    await setAuthCookies(accessToken, refreshToken);
+
+    // Optional Firebase Auth sync if Firebase is active
+    try {
+      if (email && rawPassword) {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, rawPassword);
+        const fbUser = userCredential.user;
+        const idToken = await fbUser.getIdToken();
+        await setFirebaseCookie(idToken);
+        await setDoc(doc(db, "users", fbUser.uid), {
+          name,
+          email,
+          mobile,
+          role: "USER",
+          createdAt: new Date(),
+          isActive: true,
+        });
+      }
+    } catch (fbErr) {
+      console.warn("Firebase sync skipped during registration:", fbErr);
+    }
 
     return ApiResponse.success(
-      { user: payload, accessToken: idToken },
+      { user: payload, accessToken },
       "Account created successfully",
       201
     );
-  } catch (error) {
-    console.error(error);
-
+  } catch (error: any) {
+    console.error("Registration Error:", error);
     return ApiResponse.error(
-      "Registration failed",
+      error?.message || "Registration failed",
       500
     );
   }
