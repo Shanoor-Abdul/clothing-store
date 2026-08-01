@@ -147,11 +147,6 @@ export class ProductService {
               },
             })) ?? [],
         },
-        images: {
-          orderBy: {
-            displayOrder: "asc",
-          },
-        },
       },
       include: productIncludeConfig,
     });
@@ -170,12 +165,6 @@ export class ProductService {
     if (exists) {
       throw new Error("Product with this SKU or Slug already exists.");
     }
-
-    await prisma.productImage.deleteMany({
-      where: {
-        productId: id,
-      },
-    });
 
     await prisma.productCollection.deleteMany({
       where: {
@@ -280,11 +269,6 @@ export class ProductService {
                 },
               },
             })) ?? [],
-        },
-        images: {
-          orderBy: {
-            displayOrder: "asc",
-          },
         },
       },
       include: productIncludeConfig,
