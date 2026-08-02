@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Upload, X } from "lucide-react";
+import { Upload, X, Film, Video } from "lucide-react";
 
 import {
   BannerSchema,
@@ -40,8 +40,9 @@ const BannerForm = ({
   }, [defaultValues, reset]);
 
   const imageUrl = useWatch({ control, name: "imageUrl" }) ?? "";
+  const isVideo = imageUrl.startsWith("data:video") || imageUrl.endsWith(".mp4") || imageUrl.endsWith(".webm");
 
-  const handleImageUpload = (file: File | undefined) => {
+  const handleFileUpload = (file: File | undefined) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
@@ -55,7 +56,7 @@ const BannerForm = ({
     reader.readAsDataURL(file);
   };
 
-  const removeImage = () => {
+  const removeMedia = () => {
     setValue("imageUrl", "", {
       shouldValidate: true,
       shouldDirty: true,
@@ -97,44 +98,56 @@ const BannerForm = ({
         />
       </div>
 
+      {/* Banner Media File Upload (Image or Video) */}
       <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700">
-          Banner Image
+        <label className="mb-2 block text-sm font-semibold text-slate-700 flex items-center gap-2">
+          <Film size={18} className="text-purple-600" /> Banner Image / Video File Upload
         </label>
         <p className="mb-3 text-xs text-slate-500">
-          Upload an image file for this hero banner.
+          Upload an image file (JPG/PNG) or short hero video reel (MP4/WEBM, recommended aspect ratio 21:9 or 16:9).
         </p>
 
         <div className="flex flex-col gap-4">
           <label className="flex cursor-pointer items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-300 p-6 transition hover:border-blue-500 hover:bg-blue-50/50">
             <Upload size={22} className="text-slate-400" />
             <span className="text-sm font-semibold text-slate-700">
-              Click to select banner image file
+              Click to select Banner Image or Video file
             </span>
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,video/mp4,video/webm"
               hidden
               onChange={(e) => {
                 if (e.target.files?.[0]) {
-                  handleImageUpload(e.target.files[0]);
+                  handleFileUpload(e.target.files[0]);
                 }
               }}
             />
           </label>
 
           {imageUrl && (
-            <div className="relative w-full max-w-lg aspect-[21/9] rounded-xl border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center">
-              <Image
-                src={imageUrl}
-                alt="Banner preview"
-                fill
-                className="object-cover"
-                unoptimized
-              />
+            <div className="relative w-full max-w-lg aspect-[21/9] rounded-xl border border-slate-200 overflow-hidden bg-slate-900 flex items-center justify-center">
+              {isVideo ? (
+                <video
+                  src={imageUrl}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Image
+                  src={imageUrl}
+                  alt="Banner preview"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              )}
               <button
                 type="button"
-                onClick={removeImage}
+                onClick={removeMedia}
                 className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-white shadow hover:bg-red-700 transition z-10"
               >
                 <X size={14} />
