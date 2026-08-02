@@ -30,6 +30,10 @@ export const useAdminLogin = () => {
     mutationFn: (data: AdminLoginFormData) =>
       adminLogin(data),
     onSuccess: (res) => {
+      if (res.accessToken) {
+        localStorage.setItem("token", res.accessToken);
+        localStorage.setItem("cs_access_token", res.accessToken);
+      }
       dispatch(setAuth({ user: res.user }));
     },
   });
@@ -44,6 +48,7 @@ export const useUserLogin = () => {
     onSuccess: (res) => {
       if (res.accessToken) {
         localStorage.setItem("token", res.accessToken);
+        localStorage.setItem("cs_access_token", res.accessToken);
       }
       dispatch(setAuth({ user: res.user }));
     },
@@ -59,6 +64,7 @@ export const useUserRegister = () => {
     onSuccess: (res) => {
       if (res.accessToken) {
         localStorage.setItem("token", res.accessToken);
+        localStorage.setItem("cs_access_token", res.accessToken);
       }
       dispatch(setAuth({ user: res.user }));
     },
@@ -72,6 +78,8 @@ export const useLogout = () => {
   return useMutation({
     mutationFn: () => logout(),
     onSuccess: () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("cs_access_token");
       dispatch(clearAuth());
       queryClient.clear();
     },
