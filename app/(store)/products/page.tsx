@@ -254,6 +254,18 @@ const ProductsPageInner = () => {
             );
             return (
               <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                <button
+                  type="button"
+                  onClick={() => updateFilter("brand", "")}
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-left transition ${
+                    !brand
+                      ? "bg-blue-600 text-white font-bold shadow-sm"
+                      : "text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span>All Brands</span>
+                  {!brand && <Check size={14} className="text-white" />}
+                </button>
                 {filteredBrands.map((b) => {
                   const isSelected = brand === b.id;
                   return (
@@ -261,7 +273,7 @@ const ProductsPageInner = () => {
                       key={b.id}
                       type="button"
                       onClick={() => updateFilter("brand", isSelected ? "" : b.id)}
-                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs text-left transition ${
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-left transition ${
                         isSelected
                           ? "bg-blue-600 text-white font-bold shadow-sm"
                           : "text-slate-700 hover:bg-slate-100"
@@ -347,6 +359,18 @@ const ProductsPageInner = () => {
             );
             return (
               <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                <button
+                  type="button"
+                  onClick={() => updateFilter("collection", "")}
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-left transition ${
+                    !collection
+                      ? "bg-blue-600 text-white font-bold shadow-sm"
+                      : "text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span>All Collections</span>
+                  {!collection && <Check size={14} className="text-white" />}
+                </button>
                 {filteredCollections
                   .filter((c) => c.isActive)
                   .map((c) => {
@@ -356,7 +380,7 @@ const ProductsPageInner = () => {
                         key={c.id}
                         type="button"
                         onClick={() => updateFilter("collection", isSelected ? "" : c.id)}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${
+                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-left transition ${
                           isSelected
                             ? "bg-blue-600 text-white font-bold shadow-sm"
                             : "text-slate-700 hover:bg-slate-100"
