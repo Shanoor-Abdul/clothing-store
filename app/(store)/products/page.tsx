@@ -290,11 +290,23 @@ const ProductsPageInner = () => {
         </CollapsibleFilterGroup>
       )}
 
-      {/* Color Swatch Grid Collapsible */}
+      {/* Color List Collapsible — row style matching Departments */}
       {colors.length > 0 && (
         <CollapsibleFilterGroup title="Color" searchable={false}>
           {() => (
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+              <button
+                type="button"
+                onClick={() => updateFilter("color", "")}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-left transition ${
+                  !color
+                    ? "bg-blue-600 text-white font-bold shadow-sm"
+                    : "text-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                <span>All Colors</span>
+                {!color && <Check size={14} className="text-white" />}
+              </button>
               {colors
                 .filter((c) => c.isActive)
                 .map((c) => {
@@ -303,13 +315,22 @@ const ProductsPageInner = () => {
                     <button
                       key={c.id}
                       type="button"
-                      title={c.name}
                       onClick={() => updateFilter("color", isSelected ? "" : c.id)}
-                      className={`relative h-7 w-7 rounded-full border border-slate-300 shadow-sm transition hover:scale-110 ${
-                        isSelected ? "ring-2 ring-blue-600 ring-offset-2 scale-110" : ""
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-left transition ${
+                        isSelected
+                          ? "bg-blue-600 text-white font-bold shadow-sm"
+                          : "text-slate-700 hover:bg-slate-100"
                       }`}
-                      style={{ backgroundColor: c.hexCode || c.name.toLowerCase() }}
-                    />
+                    >
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300 shadow-sm flex-shrink-0"
+                          style={{ backgroundColor: c.hexCode || c.name.toLowerCase() }}
+                        />
+                        {c.name}
+                      </span>
+                      {isSelected && <Check size={14} className="text-white" />}
+                    </button>
                   );
                 })}
             </div>
@@ -317,11 +338,23 @@ const ProductsPageInner = () => {
         </CollapsibleFilterGroup>
       )}
 
-      {/* Size Pills Collapsible */}
+      {/* Size List Collapsible — row style matching Departments */}
       {sizes.length > 0 && (
         <CollapsibleFilterGroup title="Size" searchable={false}>
           {() => (
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+              <button
+                type="button"
+                onClick={() => updateFilter("size", "")}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-left transition ${
+                  !size
+                    ? "bg-blue-600 text-white font-bold shadow-sm"
+                    : "text-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                <span>All Sizes</span>
+                {!size && <Check size={14} className="text-white" />}
+              </button>
               {sizes
                 .filter((s) => s.isActive)
                 .map((s) => {
@@ -331,13 +364,14 @@ const ProductsPageInner = () => {
                       key={s.id}
                       type="button"
                       onClick={() => updateFilter("size", isSelected ? "" : s.id)}
-                      className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-left transition ${
                         isSelected
-                          ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
+                          ? "bg-blue-600 text-white font-bold shadow-sm"
+                          : "text-slate-700 hover:bg-slate-100"
                       }`}
                     >
-                      {s.name}
+                      <span>{s.name}</span>
+                      {isSelected && <Check size={14} className="text-white" />}
                     </button>
                   );
                 })}
