@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback, useMemo } from "react";
+import { Suspense, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -201,29 +201,34 @@ const ProductsPageInner = () => {
               <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
                 <Link
                   href="/products"
-                  className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                  className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition ${
                     !category
-                      ? "bg-blue-600 text-white font-bold"
+                      ? "bg-blue-600 text-white font-bold shadow-sm"
                       : "text-slate-700 hover:bg-slate-100"
                   }`}
                 >
                   <span>All Departments</span>
+                  {!category && <Check size={14} className="text-white" />}
                 </Link>
                 {filteredCategories
                   .filter((c) => c.isActive)
-                  .map((c) => (
-                    <Link
-                      key={c.id}
-                      href={`/products?category=${c.id}`}
-                      className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
-                        category === c.id
-                          ? "bg-blue-600 text-white font-bold"
-                          : "text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      <span>{c.name}</span>
-                    </Link>
-                  ))}
+                  .map((c) => {
+                    const isSelected = category === c.id;
+                    return (
+                      <Link
+                        key={c.id}
+                        href={`/products?category=${c.id}`}
+                        className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                          isSelected
+                            ? "bg-blue-600 text-white font-bold shadow-sm"
+                            : "text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>{c.name}</span>
+                        {isSelected && <Check size={14} className="text-white" />}
+                      </Link>
+                    );
+                  })}
               </div>
             );
           }}
@@ -250,12 +255,14 @@ const ProductsPageInner = () => {
                       key={b.id}
                       type="button"
                       onClick={() => updateFilter("brand", isSelected ? "" : b.id)}
-                      className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-xs text-left transition ${
-                        isSelected ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-100"
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs text-left transition ${
+                        isSelected
+                          ? "bg-blue-600 text-white font-bold shadow-sm"
+                          : "text-slate-700 hover:bg-slate-100"
                       }`}
                     >
                       <span>{b.name}</span>
-                      {isSelected && <Check size={14} className="text-blue-600" />}
+                      {isSelected && <Check size={14} className="text-white" />}
                     </button>
                   );
                 })}
@@ -281,7 +288,7 @@ const ProductsPageInner = () => {
                       title={c.name}
                       onClick={() => updateFilter("color", isSelected ? "" : c.id)}
                       className={`relative h-7 w-7 rounded-full border border-slate-300 shadow-sm transition hover:scale-110 ${
-                        isSelected ? "ring-2 ring-blue-600 ring-offset-2" : ""
+                        isSelected ? "ring-2 ring-blue-600 ring-offset-2 scale-110" : ""
                       }`}
                       style={{ backgroundColor: c.hexCode || c.name.toLowerCase() }}
                     />
@@ -306,9 +313,9 @@ const ProductsPageInner = () => {
                       key={s.id}
                       type="button"
                       onClick={() => updateFilter("size", isSelected ? "" : s.id)}
-                      className={`rounded-lg border px-3 py-1 text-xs font-bold transition ${
+                      className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
                         isSelected
-                          ? "border-blue-600 bg-blue-600 text-white shadow"
+                          ? "border-blue-600 bg-blue-600 text-white shadow-sm"
                           : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
                       }`}
                     >
@@ -343,11 +350,14 @@ const ProductsPageInner = () => {
                         key={c.id}
                         type="button"
                         onClick={() => updateFilter("collection", isSelected ? "" : c.id)}
-                        className={`block w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition ${
-                          isSelected ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-100"
+                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-semibold transition ${
+                          isSelected
+                            ? "bg-blue-600 text-white font-bold shadow-sm"
+                            : "text-slate-700 hover:bg-slate-100"
                         }`}
                       >
-                        {c.name}
+                        <span>{c.name}</span>
+                        {isSelected && <Check size={14} className="text-white" />}
                       </button>
                     );
                   })}
@@ -381,7 +391,7 @@ const ProductsPageInner = () => {
             <button
               type="button"
               onClick={handleApplyPriceFilter}
-              className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow hover:bg-blue-700 transition"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow hover:bg-blue-700 transition"
             >
               <DollarSign size={14} /> Apply Price Filter
             </button>
