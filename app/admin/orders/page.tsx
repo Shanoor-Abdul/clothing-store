@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Eye, RefreshCw, ShoppingBag, CreditCard, User, MapPin, Calendar, Maximize2, X } from "lucide-react";
+import { Search, Eye, RefreshCw, ShoppingBag, CreditCard, User, MapPin, Calendar, Maximize2, X, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import { formatCurrency } from "@/utils";
@@ -32,7 +32,7 @@ interface Order {
   orderNumber: string;
   status: "PENDING" | "CONFIRMED" | "SHIPPED" | "DELIVERED" | "CANCELLED";
   paymentMethod: string;
-  paymentStatus: string;
+  paymentStatus: "PENDING" | "PAID" | "FAILED" | "REFUNDED";
   subtotal: number;
   shipping: number;
   total: number;
@@ -53,8 +53,8 @@ const fetchOrders = async (statusFilter: string): Promise<Order[]> => {
   return data.data;
 };
 
-const updateOrderStatusApi = async ({ id, status }: { id: string; status: string }) => {
-  const { data } = await api.patch<ApiResponse<Order>>(`/admin/orders/${id}`, { status });
+const updateOrderStatusApi = async ({ id, status, paymentStatus }: { id: string; status?: string; paymentStatus?: string }) => {
+  const { data } = await api.patch<ApiResponse<Order>>(`/admin/orders/${id}`, { status, paymentStatus });
   return data.data;
 };
 
@@ -64,6 +64,13 @@ const statusColors: Record<string, string> = {
   SHIPPED: "bg-purple-100 text-purple-800 border-purple-300",
   DELIVERED: "bg-emerald-100 text-emerald-800 border-emerald-300",
   CANCELLED: "bg-rose-100 text-rose-800 border-rose-300",
+};
+
+const paymentStatusColors: Record<string, string> = {
+  PENDING: "bg-amber-50 text-amber-700 border-amber-300",
+  PAID: "bg-emerald-100 text-emerald-800 border-emerald-400 font-bold",
+  FAILED: "bg-rose-100 text-rose-800 border-rose-300",
+  REFUNDED: "bg-purple-100 text-purple-800 border-purple-300",
 };
 
 export default function AdminOrdersPage() {
@@ -85,13 +92,14 @@ export default function AdminOrdersPage() {
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "orders"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-      toast.success(`Order #${updated.orderNumber} status updated to ${updated.status}`);
+      queryClient.invalidateQueries({ queryKey: ["admin", "revenue"] });
+      toast.success(`Order #${updated.orderNumber} updated successfully!`);
       if (selectedOrder?.id === updated.id) {
-        setSelectedOrder((prev) => prev ? { ...prev, status: updated.status } : null);
+        setSelectedOrder((prev) => prev ? { ...prev, status: updated.status, paymentStatus: updated.paymentStatus } : null);
       }
     },
     onError: () => {
-      toast.error("Failed to update order status");
+      toast.error("Failed to update order");
     },
   });
 
@@ -142,7 +150,7 @@ export default function AdminOrdersPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Orders Management</h1>
-          <p className="mt-1 text-slate-500">Track, filter, and manage customer orders and shipment statuses.</p>
+          <p className="mt-1 text-slate-500">Track orders, update delivery status, and mark payments received.</p>
         </div>
 
         <button
@@ -244,25 +252,25 @@ export default function AdminOrdersPage() {
                 <th className="p-4">Order Number</th>
                 <th className="p-4">Customer</th>
                 <th className="p-4">Items Summary</th>
-                <th className="p-4">Date</th>
                 <th className="p-4">Total</th>
-                <th className="p-4">Status</th>
+                <th className="p-4">Order Status</th>
+                <th className="p-4">Payment Status</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-slate-50/50">
-                  <td className="p-4 font-semibold text-slate-900">{order.orderNumber}</td>
+                  <td className="p-4 font-semibold text-slate-900">
+                    {order.orderNumber}
+                    <p className="text-[11px] font-normal text-slate-400">{new Date(order.createdAt).toLocaleDateString()}</p>
+                  </td>
                   <td className="p-4">
                     <p className="font-medium text-slate-800">{order.user?.name || "Guest"}</p>
                     <p className="text-xs text-slate-400">{order.user?.email || "No email"}</p>
                   </td>
                   <td className="p-4 text-slate-600 max-w-xs truncate">
                     {order.items.map((i) => `${i.quantity}x ${i.productName}`).join(", ")}
-                  </td>
-                  <td className="p-4 text-slate-500">
-                    {new Date(order.createdAt).toLocaleDateString()}
                   </td>
                   <td className="p-4 font-bold text-slate-900">{formatCurrency(Number(order.total))}</td>
                   <td className="p-4">
@@ -282,6 +290,25 @@ export default function AdminOrdersPage() {
                       <option value="CANCELLED">CANCELLED</option>
                     </select>
                   </td>
+
+                  {/* Payment Status Dropdown Handler */}
+                  <td className="p-4">
+                    <select
+                      value={order.paymentStatus}
+                      onChange={(e) =>
+                        updateMutation.mutate({ id: order.id, paymentStatus: e.target.value })
+                      }
+                      className={`rounded-full border px-3 py-1 text-xs font-bold outline-none cursor-pointer ${
+                        paymentStatusColors[order.paymentStatus]
+                      }`}
+                    >
+                      <option value="PENDING">Payment Pending</option>
+                      <option value="PAID">Payment Received (Paid)</option>
+                      <option value="FAILED">Payment Failed</option>
+                      <option value="REFUNDED">Refunded</option>
+                    </select>
+                  </td>
+
                   <td className="p-4 text-right">
                     <button
                       onClick={() => setSelectedOrder(order)}
@@ -342,15 +369,33 @@ export default function AdminOrdersPage() {
                     {selectedOrder.address.state ? `, ${selectedOrder.address.state}` : ""}, {selectedOrder.address.country}
                   </p>
                 </div>
-              ) : (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-900 border-b pb-2">
-                    <CreditCard size={16} className="text-purple-600" /> Payment Info
-                  </div>
-                  <p className="pt-1">Method: <span className="font-bold text-slate-900">{selectedOrder.paymentMethod === "COD" ? "Cash on Delivery" : selectedOrder.paymentMethod}</span></p>
-                  <p>Payment Status: <span className="font-bold text-amber-600">{selectedOrder.paymentStatus}</span></p>
+              ) : null}
+            </div>
+
+            {/* Payment Status Handler inside Modal */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <CreditCard size={18} className="text-purple-600" />
+                <div>
+                  <span className="font-bold text-slate-900 block">Payment Method: {selectedOrder.paymentMethod === "COD" ? "Cash on Delivery (COD)" : selectedOrder.paymentMethod}</span>
+                  <span className="text-slate-500">Update payment status upon cash collection or online confirmation</span>
                 </div>
-              )}
+              </div>
+
+              <select
+                value={selectedOrder.paymentStatus}
+                onChange={(e) =>
+                  updateMutation.mutate({ id: selectedOrder.id, paymentStatus: e.target.value })
+                }
+                className={`rounded-xl border px-3 py-1.5 text-xs font-bold outline-none cursor-pointer ${
+                  paymentStatusColors[selectedOrder.paymentStatus]
+                }`}
+              >
+                <option value="PENDING">Payment Pending</option>
+                <option value="PAID">Payment Received (Paid)</option>
+                <option value="FAILED">Payment Failed</option>
+                <option value="REFUNDED">Refunded</option>
+              </select>
             </div>
 
             {/* Purchased Items List */}

@@ -308,8 +308,27 @@ export default function OrdersPage() {
                     </div>
                     <div>
                       <p className="font-bold text-slate-900 mb-1">Payment Details</p>
-                      <p>Method: <span className="font-semibold">{order.paymentMethod === "COD" ? "Cash on Delivery" : order.paymentMethod}</span></p>
-                      <p>Payment Status: <span className="font-semibold text-amber-600">{order.paymentStatus}</span></p>
+                      <p>Method: <span className="font-semibold text-slate-800">{order.paymentMethod === "COD" ? "Cash on Delivery" : order.paymentMethod}</span></p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-slate-500">Status:</span>
+                        {order.paymentStatus === "PAID" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 border border-emerald-300">
+                            ✓ Payment Received (Paid)
+                          </span>
+                        ) : order.paymentStatus === "FAILED" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-0.5 text-[11px] font-bold text-rose-800 border border-rose-300">
+                            ✕ Payment Failed
+                          </span>
+                        ) : order.paymentStatus === "REFUNDED" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-bold text-purple-800 border border-purple-300">
+                            ↩ Refunded
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-300">
+                            ⏳ Payment Pending
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

@@ -52,6 +52,26 @@ export async function POST(request: NextRequest) {
       9999
     )}`;
 
+    // Resolve product names for any items missing names
+    const productIds = items.map((i: any) => i.productId).filter(Boolean);
+    const productsMap = new Map<string, { name: string; image: string | null }>();
+    if (productIds.length > 0) {
+      const dbProducts = await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: {
+          id: true,
+          name: true,
+          images: { select: { imageUrl: true }, take: 1 },
+        },
+      });
+      dbProducts.forEach((p) => {
+        productsMap.set(p.id, {
+          name: p.name,
+          image: p.images?.[0]?.imageUrl || null,
+        });
+      });
+    }
+
     const order = await prisma.order.create({
       data: {
         orderNumber,
@@ -61,18 +81,20 @@ export async function POST(request: NextRequest) {
         subtotal: total,
         total,
         status: "PENDING",
-        paymentStatus:
-          paymentMethod === "COD" ? "PENDING" : "PENDING",
+        paymentStatus: "PENDING",
         items: {
-          create: items.map((item: any) => ({
-            productId: item.productId,
-            variantId: item.variantId ?? null,
-            productName: item.productName || item.name || "",
-            color: item.color ?? null,
-            size: item.size ?? null,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+          create: items.map((item: any) => {
+            const pInfo = productsMap.get(item.productId);
+            return {
+              productId: item.productId,
+              variantId: item.variantId ?? null,
+              productName: item.productName || item.name || pInfo?.name || "Product Item",
+              color: item.color ?? null,
+              size: item.size ?? null,
+              quantity: item.quantity,
+              price: item.price,
+            };
+          }),
         },
       },
       include: { items: true },
@@ -103,5 +125,48 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return ApiResponse.success(orders, "Orders fetched");
+  // Extract all product IDs to enrich order items with product titles and images
+  const productIds = Array.from(
+    new Set(
+      orders
+        .flatMap((order) => order.items.map((item) => item.productId))
+        .filter(Boolean)
+    )
+  );
+
+  const productsMap = new Map<string, { name: string; image: string | null }>();
+  if (productIds.length > 0) {
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: {
+        id: true,
+        name: true,
+        images: {
+          select: { imageUrl: true },
+          take: 1,
+        },
+      },
+    });
+
+    products.forEach((product) => {
+      productsMap.set(product.id, {
+        name: product.name,
+        image: product.images?.[0]?.imageUrl || null,
+      });
+    });
+  }
+
+  const enrichedOrders = orders.map((order) => ({
+    ...order,
+    items: order.items.map((item) => {
+      const prod = productsMap.get(item.productId);
+      return {
+        ...item,
+        productName: item.productName || prod?.name || "Product Item",
+        productImage: prod?.image || null,
+      };
+    }),
+  }));
+
+  return ApiResponse.success(enrichedOrders, "Orders fetched");
 }
