@@ -18,7 +18,6 @@ const REFRESH_SECRET =
 
 export const ACCESS_TOKEN_COOKIE = "cs_access_token";
 export const REFRESH_TOKEN_COOKIE = "cs_refresh_token";
-export const FIREBASE_TOKEN_COOKIE = "token";
 
 export const ACCESS_EXPIRES = "7d";
 export const REFRESH_EXPIRES = "30d";
@@ -74,24 +73,11 @@ export const setAuthCookies = async (
   });
 };
 
-export const setFirebaseCookie = async (idToken: string) => {
-  const cookieStore = await cookies();
-
-  cookieStore.set(FIREBASE_TOKEN_COOKIE, idToken, {
-    httpOnly: false,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-};
-
 export const clearAuthCookies = async () => {
   const cookieStore = await cookies();
 
   cookieStore.delete({ name: ACCESS_TOKEN_COOKIE, path: "/" });
   cookieStore.delete({ name: REFRESH_TOKEN_COOKIE, path: "/" });
-  cookieStore.delete({ name: FIREBASE_TOKEN_COOKIE, path: "/" });
 };
 
 export const getAccessTokenFromCookies = async (): Promise<
@@ -100,14 +86,6 @@ export const getAccessTokenFromCookies = async (): Promise<
   const cookieStore = await cookies();
 
   return cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
-};
-
-export const getFirebaseTokenFromCookies = async (): Promise<
-  string | undefined
-> => {
-  const cookieStore = await cookies();
-
-  return cookieStore.get(FIREBASE_TOKEN_COOKIE)?.value;
 };
 
 export const getCurrentUser = async (): Promise<AuthPayload | null> => {

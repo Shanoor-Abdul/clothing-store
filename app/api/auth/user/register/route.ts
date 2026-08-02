@@ -6,11 +6,7 @@ import {
   setAuthCookies,
   signAccessToken,
   signRefreshToken,
-  setFirebaseCookie,
 } from "@/lib/auth";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,26 +70,6 @@ export async function POST(request: NextRequest) {
     const refreshToken = signRefreshToken(payload);
 
     await setAuthCookies(accessToken, refreshToken);
-
-    // Optional Firebase Auth sync if Firebase is active
-    try {
-      if (email && rawPassword) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, rawPassword);
-        const fbUser = userCredential.user;
-        const idToken = await fbUser.getIdToken();
-        await setFirebaseCookie(idToken);
-        await setDoc(doc(db, "users", fbUser.uid), {
-          name,
-          email,
-          mobile,
-          role: "USER",
-          createdAt: new Date(),
-          isActive: true,
-        });
-      }
-    } catch (fbErr) {
-      console.warn("Firebase sync skipped during registration:", fbErr);
-    }
 
     return ApiResponse.success(
       { user: payload, accessToken },

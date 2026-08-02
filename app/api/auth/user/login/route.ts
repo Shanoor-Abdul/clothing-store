@@ -6,11 +6,8 @@ import {
   setAuthCookies,
   signAccessToken,
   signRefreshToken,
-  setFirebaseCookie,
   clearAuthCookies,
 } from "@/lib/auth";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +20,7 @@ export async function POST(request: NextRequest) {
       return ApiResponse.error("Email and password are required", 400);
     }
 
-    // 1. Authenticate via PostgreSQL DB
+    // Authenticate via PostgreSQL DB
     const dbUser = await prisma.user.findFirst({
       where: { email },
     });
@@ -53,15 +50,6 @@ export async function POST(request: NextRequest) {
     const refreshToken = signRefreshToken(payload);
 
     await setAuthCookies(accessToken, refreshToken);
-
-    // 2. Optional Firebase Auth sync
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const idToken = await userCredential.user.getIdToken();
-      await setFirebaseCookie(idToken);
-    } catch (fbErr) {
-      console.warn("Firebase login sync skipped:", fbErr);
-    }
 
     return ApiResponse.success(
       { user: payload, accessToken },

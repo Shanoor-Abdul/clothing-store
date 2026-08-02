@@ -21,10 +21,12 @@ export function proxy(request: NextRequest) {
   const isAdminRoute = pathname.startsWith("/admin");
   const isAdminLogin = pathname === "/admin/login";
   const isAdminApiRoute = pathname.startsWith("/api/admin");
+  const isProtectedUserRoute = pathname.startsWith("/account") || pathname.startsWith("/checkout");
 
   const token = getRequestToken(request);
   const user = token ? verifyAccessToken(token) : null;
 
+  // Protect Admin API routes
   if (isAdminApiRoute) {
     if (!user || user.role !== "ADMIN") {
       return NextResponse.json(
@@ -36,6 +38,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Protect Admin Page routes
   if (isAdminRoute && !isAdminLogin) {
     if (!user || user.role !== "ADMIN") {
       const url = request.nextUrl.clone();
@@ -45,6 +48,7 @@ export function proxy(request: NextRequest) {
     }
   }
 
+  // Redirect logged-in admin away from /admin/login
   if (isAdminLogin && user && user.role === "ADMIN") {
     const url = request.nextUrl.clone();
     url.pathname = "/admin";
@@ -52,9 +56,20 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Protect User Account & Checkout routes
+  if (isProtectedUserRoute) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirect", pathname);
+
+      return NextResponse.redirect(url);
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/account/:path*", "/checkout"],
 };

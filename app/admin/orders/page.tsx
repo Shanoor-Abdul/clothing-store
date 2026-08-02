@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Eye, RefreshCw, ShoppingBag, CreditCard, User, MapPin, Calendar, Maximize2, X, DollarSign } from "lucide-react";
+import { Search, Eye, RefreshCw, ShoppingBag, CreditCard, User, MapPin, Calendar, Maximize2, X, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import { formatCurrency } from "@/utils";
@@ -150,7 +150,7 @@ export default function AdminOrdersPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Orders Management</h1>
-          <p className="mt-1 text-slate-500">Track orders, update delivery status, and mark payments received.</p>
+          <p className="mt-1 text-slate-500">Track orders, update shipment status, and confirm payments.</p>
         </div>
 
         <button
@@ -273,40 +273,57 @@ export default function AdminOrdersPage() {
                     {order.items.map((i) => `${i.quantity}x ${i.productName}`).join(", ")}
                   </td>
                   <td className="p-4 font-bold text-slate-900">{formatCurrency(Number(order.total))}</td>
+
+                  {/* Order Status Column: Lock dropdown if DELIVERED or CANCELLED */}
                   <td className="p-4">
-                    <select
-                      value={order.status}
-                      onChange={(e) =>
-                        updateMutation.mutate({ id: order.id, status: e.target.value })
-                      }
-                      className={`rounded-full border px-3 py-1 text-xs font-bold outline-none cursor-pointer ${
-                        statusColors[order.status]
-                      }`}
-                    >
-                      <option value="PENDING">PENDING</option>
-                      <option value="CONFIRMED">CONFIRMED</option>
-                      <option value="SHIPPED">SHIPPED</option>
-                      <option value="DELIVERED">DELIVERED</option>
-                      <option value="CANCELLED">CANCELLED</option>
-                    </select>
+                    {order.status === "DELIVERED" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-300">
+                        <CheckCircle2 size={13} /> Delivered
+                      </span>
+                    ) : order.status === "CANCELLED" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 border border-rose-300">
+                        ✕ Cancelled
+                      </span>
+                    ) : (
+                      <select
+                        value={order.status}
+                        onChange={(e) =>
+                          updateMutation.mutate({ id: order.id, status: e.target.value })
+                        }
+                        className={`rounded-full border px-3 py-1 text-xs font-bold outline-none cursor-pointer ${
+                          statusColors[order.status]
+                        }`}
+                      >
+                        <option value="PENDING">PENDING</option>
+                        <option value="CONFIRMED">CONFIRMED</option>
+                        <option value="SHIPPED">SHIPPED</option>
+                        <option value="DELIVERED">DELIVERED</option>
+                      </select>
+                    )}
                   </td>
 
-                  {/* Payment Status Dropdown Handler */}
+                  {/* Payment Status Column: Lock dropdown once PAID */}
                   <td className="p-4">
-                    <select
-                      value={order.paymentStatus}
-                      onChange={(e) =>
-                        updateMutation.mutate({ id: order.id, paymentStatus: e.target.value })
-                      }
-                      className={`rounded-full border px-3 py-1 text-xs font-bold outline-none cursor-pointer ${
-                        paymentStatusColors[order.paymentStatus]
-                      }`}
-                    >
-                      <option value="PENDING">Payment Pending</option>
-                      <option value="PAID">Payment Received (Paid)</option>
-                      <option value="FAILED">Payment Failed</option>
-                      <option value="REFUNDED">Refunded</option>
-                    </select>
+                    {order.paymentStatus === "PAID" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-300">
+                        ✓ Payment Received (Paid)
+                      </span>
+                    ) : (
+                      <select
+                        value={order.paymentStatus}
+                        onChange={(e) =>
+                          updateMutation.mutate({ id: order.id, paymentStatus: e.target.value })
+                        }
+                        className={`rounded-full border px-3 py-1 text-xs font-bold outline-none cursor-pointer ${
+                          paymentStatusColors[order.paymentStatus]
+                        }`}
+                      >
+                        <option value="PENDING">Payment Pending</option>
+                        <option value="PAID">Payment Received (Paid)</option>
+                        <option value="FAILED">Payment Failed</option>
+                        <option value="REFUNDED">Refunded</option>
+                      </select>
+                    )}
                   </td>
 
                   <td className="p-4 text-right">
@@ -372,7 +389,7 @@ export default function AdminOrdersPage() {
               ) : null}
             </div>
 
-            {/* Payment Status Handler inside Modal */}
+            {/* Payment Status Lock in Modal */}
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2">
                 <CreditCard size={18} className="text-purple-600" />
@@ -382,20 +399,26 @@ export default function AdminOrdersPage() {
                 </div>
               </div>
 
-              <select
-                value={selectedOrder.paymentStatus}
-                onChange={(e) =>
-                  updateMutation.mutate({ id: selectedOrder.id, paymentStatus: e.target.value })
-                }
-                className={`rounded-xl border px-3 py-1.5 text-xs font-bold outline-none cursor-pointer ${
-                  paymentStatusColors[selectedOrder.paymentStatus]
-                }`}
-              >
-                <option value="PENDING">Payment Pending</option>
-                <option value="PAID">Payment Received (Paid)</option>
-                <option value="FAILED">Payment Failed</option>
-                <option value="REFUNDED">Refunded</option>
-              </select>
+              {selectedOrder.paymentStatus === "PAID" ? (
+                <span className="inline-flex items-center gap-1 rounded-xl bg-emerald-100 px-4 py-2 text-xs font-bold text-emerald-800 border border-emerald-300">
+                  ✓ Payment Received (Paid)
+                </span>
+              ) : (
+                <select
+                  value={selectedOrder.paymentStatus}
+                  onChange={(e) =>
+                    updateMutation.mutate({ id: selectedOrder.id, paymentStatus: e.target.value })
+                  }
+                  className={`rounded-xl border px-3 py-1.5 text-xs font-bold outline-none cursor-pointer ${
+                    paymentStatusColors[selectedOrder.paymentStatus]
+                  }`}
+                >
+                  <option value="PENDING">Payment Pending</option>
+                  <option value="PAID">Payment Received (Paid)</option>
+                  <option value="FAILED">Payment Failed</option>
+                  <option value="REFUNDED">Refunded</option>
+                </select>
+              )}
             </div>
 
             {/* Purchased Items List */}
