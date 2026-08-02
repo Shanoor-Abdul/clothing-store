@@ -77,7 +77,7 @@ export async function POST(
     const reviewCount = allReviews.length;
     const avgRating =
       reviewCount > 0
-        ? allReviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount
+        ? allReviews.reduce((acc: number, r: { rating: number }) => acc + r.rating, 0) / reviewCount
         : 0;
 
     await prisma.product.update({
@@ -89,7 +89,7 @@ export async function POST(
     });
 
     return ApiResponse.success(review, "Review submitted successfully", 201);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Submit Review Error:", error);
     return ApiResponse.error("Failed to submit review", 500);
   }

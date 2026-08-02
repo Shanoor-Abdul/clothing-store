@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
+import { type Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
+
+type RecentOrder = Prisma.OrderGetPayload<{
+  include: {
+    items: true;
+    user: { select: { name: true; email: true } };
+  };
+}>;
 
 export async function GET() {
   try {
@@ -37,7 +45,7 @@ export async function GET() {
       ? Number(totalRevenue._sum.total)
       : 0;
 
-    const formattedRecentOrders = recentOrders.map((order) => ({
+    const formattedRecentOrders = recentOrders.map((order: RecentOrder) => ({
       id: order.id,
       orderNumber: order.orderNumber,
       userId: order.userId,
@@ -49,7 +57,7 @@ export async function GET() {
       shipping: Number(order.shipping || 0),
       total: Number(order.total || 0),
       createdAt: order.createdAt,
-      items: order.items.map((item) => ({
+      items: order.items.map((item: RecentOrder["items"][number]) => ({
         id: item.id,
         productId: item.productId,
         productName: item.productName,
@@ -62,7 +70,10 @@ export async function GET() {
     }));
 
     const formattedOrdersByStatus = ordersByStatus.reduce(
-      (acc: Record<string, number>, curr) => {
+      (
+        acc: Record<string, number>,
+        curr: typeof ordersByStatus[number]
+      ) => {
         acc[curr.status] = curr._count.id;
         return acc;
       },
@@ -83,12 +94,13 @@ export async function GET() {
         ordersByStatus: formattedOrdersByStatus,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Dashboard API Detailed Error:", error);
+    const message = error instanceof Error ? error.message : "Failed to fetch dashboard data";
     return NextResponse.json(
       {
         success: false,
-        message: error?.message || "Failed to fetch dashboard data",
+        message,
       },
       { status: 500 }
     );

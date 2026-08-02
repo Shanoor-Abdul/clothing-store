@@ -1,5 +1,32 @@
+import { type Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+
+type RevenueOrder = Prisma.OrderGetPayload<{ include: { items: true } }>;
+
+type RevenueProduct = Prisma.ProductGetPayload<{
+  include: {
+    category: { select: { id: true; name: true } };
+    collections: { include: { collection: { select: { id: true; name: true } } } };
+    variants: { select: { stock: true } };
+  };
+}>;
+
+type RevenueItemStats = {
+  name: string;
+  quantity: number;
+  revenue: number;
+};
+
+type TopProduct = {
+  id: string;
+  name: string;
+  sku: string;
+  categoryName: string;
+  unitsSold: number;
+  totalRevenue: number;
+  stock: number;
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,11 +54,11 @@ export async function GET(request: NextRequest) {
       endDate = new Date(year, monthIdx + 1, 0, 23, 59, 59);
     }
 
-    const dateFilter: any = {};
+    const dateFilter: Prisma.DateTimeFilter = {};
     if (startDate) dateFilter.gte = startDate;
     if (endDate) dateFilter.lte = endDate;
 
-    const orderWhere: any = {
+    const orderWhere: Prisma.OrderWhereInput = {
       OR: [{ status: "DELIVERED" }, { paymentStatus: "PAID" }],
     };
     if (startDate || endDate) {
@@ -44,12 +71,15 @@ export async function GET(request: NextRequest) {
       include: {
         items: true,
       },
-    });
+    }) as RevenueOrder[];
 
-    const grossRevenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+    const grossRevenue = orders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0
+    );
 
     // Collect all product IDs in orders to calculate sales per product, category, collection
-    const itemMap = new Map<string, { name: string; quantity: number; revenue: number }>();
+    const itemMap = new Map<string, RevenueItemStats>();
     orders.forEach((order) => {
       order.items.forEach((item) => {
         const current = itemMap.get(item.productId) || {
@@ -72,18 +102,21 @@ export async function GET(request: NextRequest) {
             collections: { include: { collection: { select: { id: true, name: true } } } },
             variants: { select: { stock: true } },
           },
-        })
+        }) as RevenueProduct[]
       : [];
 
     const categoryRevenueMap = new Map<string, { name: string; salesCount: number; totalRevenue: number }>();
     const collectionRevenueMap = new Map<string, { name: string; salesCount: number; totalRevenue: number }>();
-    const topProductsList: any[] = [];
+    const topProductsList: TopProduct[] = [];
 
     products.forEach((prod) => {
       const stats = itemMap.get(prod.id);
       if (!stats) return;
 
-      const totalStock = prod.variants?.reduce((s, v) => s + (v.stock || 0), 0) || (prod.isActive ? 10 : 0);
+      const totalStock = prod.variants?.reduce(
+        (s, v) => s + (v.stock || 0),
+        0
+      ) || (prod.isActive ? 10 : 0);
 
       topProductsList.push({
         id: prod.id,
@@ -130,14 +163,14 @@ export async function GET(request: NextRequest) {
         summary: {
           grossRevenue,
           ordersCount: orders.length,
-          deliveredCount: orders.filter((o) => o.status === "DELIVERED").length,
+          deliveredCount: orders.filter((order) => order.status === "DELIVERED").length,
         },
         revenueByCategory: Array.from(categoryRevenueMap.values()),
         revenueByCollection: Array.from(collectionRevenueMap.values()),
         topSellingProducts: topProductsList,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Revenue API Error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch revenue analytics" },
