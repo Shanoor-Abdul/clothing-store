@@ -29,8 +29,13 @@ export async function GET() {
       name: true,
       email: true,
       mobile: true,
+      gender: true,
       profileImage: true,
       createdAt: true,
+      addresses: {
+        take: 1,
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
@@ -54,6 +59,7 @@ export async function PUT(request: NextRequest) {
     const mobile = body.mobile
       ? String(body.mobile).trim()
       : undefined;
+    const gender = body.gender ? String(body.gender).trim() : undefined;
     const currentPassword = body.currentPassword
       ? String(body.currentPassword)
       : "";
@@ -102,6 +108,7 @@ export async function PUT(request: NextRequest) {
     if (name) dataToUpdate.name = name;
     if (email) dataToUpdate.email = email;
     if (mobile) dataToUpdate.mobile = mobile;
+    if (gender !== undefined) dataToUpdate.gender = gender;
     if (newPassword) {
       dataToUpdate.password = await hashPassword(newPassword);
     }
@@ -114,6 +121,7 @@ export async function PUT(request: NextRequest) {
         name: true,
         email: true,
         mobile: true,
+        gender: true,
         profileImage: true,
       },
     });

@@ -4,12 +4,13 @@ import { Suspense, useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Filter, X, Search, RotateCcw, Check } from "lucide-react";
+import { Filter, X, RotateCcw, Check, DollarSign } from "lucide-react";
 
 import api from "@/lib/axios";
 import ProductCard from "../components/ProductCard";
 import Pagination from "@/components/common/Pagination";
 import { ProductCardSkeleton } from "@/components/common/Skeleton";
+import CollapsibleFilterGroup from "@/components/common/CollapsibleFilterGroup";
 import { Category } from "@/features/category/types/category";
 import { Color } from "@/features/color/types/color";
 import { Size } from "@/features/size/types/size";
@@ -63,7 +64,6 @@ const ProductsPageInner = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const [brandSearch, setBrandSearch] = useState("");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const category = searchParams.get("category");
@@ -75,6 +75,10 @@ const ProductsPageInner = () => {
   const collection = searchParams.get("collection");
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
+
+  // Local state for Price inputs to prevent triggering API on every keystroke
+  const [localMinPrice, setLocalMinPrice] = useState(minPrice || "");
+  const [localMaxPrice, setLocalMaxPrice] = useState(maxPrice || "");
 
   const query = new URLSearchParams();
   if (category) query.set("category", category);
@@ -137,20 +141,26 @@ const ProductsPageInner = () => {
     [searchParams, router]
   );
 
+  const handleApplyPriceFilter = () => {
+    const params = new URLSearchParams(searchParams);
+    if (localMinPrice) params.set("minPrice", localMinPrice);
+    else params.delete("minPrice");
+    if (localMaxPrice) params.set("maxPrice", localMaxPrice);
+    else params.delete("maxPrice");
+
+    setPage(1);
+    router.push(`/products?${params.toString()}`);
+  };
+
   const clearAllFilters = useCallback(() => {
     setPage(1);
+    setLocalMinPrice("");
+    setLocalMaxPrice("");
     router.push("/products");
   }, [router]);
 
   const hasActiveFilters =
     category || brand || search || featured || color || size || collection || minPrice || maxPrice;
-
-  const filteredBrands = useMemo(() => {
-    if (!brandSearch.trim()) return brands;
-    return brands.filter((b) =>
-      b.name.toLowerCase().includes(brandSearch.toLowerCase())
-    );
-  }, [brands, brandSearch]);
 
   const title = search
     ? `Results for "${search}"`
@@ -166,7 +176,7 @@ const ProductsPageInner = () => {
   );
 
   const filterContent = (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {hasActiveFilters && (
         <button
           onClick={clearAllFilters}
@@ -176,198 +186,218 @@ const ProductsPageInner = () => {
         </button>
       )}
 
-      {/* Departments / Categories */}
+      {/* Departments / Categories Collapsible */}
       {categories.length > 0 && (
-        <div className="space-y-2 border-b pb-5">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-            Departments
-          </h3>
-          <div className="space-y-1">
-            <Link
-              href="/products"
-              className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                !category
-                  ? "bg-blue-600 text-white font-bold"
-                  : "text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              <span>All Departments</span>
-            </Link>
-            {categories
-              .filter((c) => c.isActive)
-              .map((c) => (
+        <CollapsibleFilterGroup
+          title="Departments"
+          searchable={true}
+          searchPlaceholder="Search category..."
+        >
+          {(searchQuery) => {
+            const filteredCategories = categories.filter((c) =>
+              c.name.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            return (
+              <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
                 <Link
-                  key={c.id}
-                  href={`/products?category=${c.id}`}
-                  className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                    category === c.id
+                  href="/products"
+                  className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                    !category
                       ? "bg-blue-600 text-white font-bold"
                       : "text-slate-700 hover:bg-slate-100"
                   }`}
                 >
-                  <span>{c.name}</span>
+                  <span>All Departments</span>
                 </Link>
-              ))}
-          </div>
-        </div>
+                {filteredCategories
+                  .filter((c) => c.isActive)
+                  .map((c) => (
+                    <Link
+                      key={c.id}
+                      href={`/products?category=${c.id}`}
+                      className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                        category === c.id
+                          ? "bg-blue-600 text-white font-bold"
+                          : "text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      <span>{c.name}</span>
+                    </Link>
+                  ))}
+              </div>
+            );
+          }}
+        </CollapsibleFilterGroup>
       )}
 
-      {/* Brands Multi-filter */}
+      {/* Brands Multi-filter Collapsible */}
       {brands.length > 0 && (
-        <div className="space-y-2 border-b pb-5">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-            Brand
-          </h3>
-          <div className="relative my-2">
-            <Search size={14} className="absolute left-2.5 top-2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search brand..."
-              value={brandSearch}
-              onChange={(e) => setBrandSearch(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-blue-500"
-            />
-          </div>
-          <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
-            {filteredBrands.map((b) => {
-              const isSelected = brand === b.id;
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => updateFilter("brand", isSelected ? "" : b.id)}
-                  className={`flex w-full items-center justify-between rounded px-2 py-1 text-xs text-left transition ${
-                    isSelected ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  <span>{b.name}</span>
-                  {isSelected && <Check size={14} className="text-blue-600" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <CollapsibleFilterGroup
+          title="Brand"
+          searchable={true}
+          searchPlaceholder="Search brand..."
+        >
+          {(searchQuery) => {
+            const filteredBrands = brands.filter((b) =>
+              b.name.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            return (
+              <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                {filteredBrands.map((b) => {
+                  const isSelected = brand === b.id;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => updateFilter("brand", isSelected ? "" : b.id)}
+                      className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-xs text-left transition ${
+                        isSelected ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      <span>{b.name}</span>
+                      {isSelected && <Check size={14} className="text-blue-600" />}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          }}
+        </CollapsibleFilterGroup>
       )}
 
-      {/* Color Swatch Grid */}
+      {/* Color Swatch Grid Collapsible */}
       {colors.length > 0 && (
-        <div className="space-y-2 border-b pb-5">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-            Color
-          </h3>
-          <div className="flex flex-wrap gap-2 pt-1">
-            {colors
-              .filter((c) => c.isActive)
-              .map((c) => {
-                const isSelected = color === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    title={c.name}
-                    onClick={() => updateFilter("color", isSelected ? "" : c.id)}
-                    className={`relative h-7 w-7 rounded-full border border-slate-300 shadow-sm transition hover:scale-110 ${
-                      isSelected ? "ring-2 ring-blue-600 ring-offset-2" : ""
-                    }`}
-                    style={{ backgroundColor: c.hexCode || c.name.toLowerCase() }}
-                  />
-                );
-              })}
-          </div>
-        </div>
+        <CollapsibleFilterGroup title="Color" searchable={false}>
+          {() => (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {colors
+                .filter((c) => c.isActive)
+                .map((c) => {
+                  const isSelected = color === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      title={c.name}
+                      onClick={() => updateFilter("color", isSelected ? "" : c.id)}
+                      className={`relative h-7 w-7 rounded-full border border-slate-300 shadow-sm transition hover:scale-110 ${
+                        isSelected ? "ring-2 ring-blue-600 ring-offset-2" : ""
+                      }`}
+                      style={{ backgroundColor: c.hexCode || c.name.toLowerCase() }}
+                    />
+                  );
+                })}
+            </div>
+          )}
+        </CollapsibleFilterGroup>
       )}
 
-      {/* Size Pills */}
+      {/* Size Pills Collapsible */}
       {sizes.length > 0 && (
-        <div className="space-y-2 border-b pb-5">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-            Size
-          </h3>
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {sizes
-              .filter((s) => s.isActive)
-              .map((s) => {
-                const isSelected = size === s.id;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => updateFilter("size", isSelected ? "" : s.id)}
-                    className={`rounded-lg border px-3 py-1 text-xs font-bold transition ${
-                      isSelected
-                        ? "border-blue-600 bg-blue-600 text-white shadow"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
-                    }`}
-                  >
-                    {s.name}
-                  </button>
-                );
-              })}
-          </div>
-        </div>
+        <CollapsibleFilterGroup title="Size" searchable={false}>
+          {() => (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {sizes
+                .filter((s) => s.isActive)
+                .map((s) => {
+                  const isSelected = size === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => updateFilter("size", isSelected ? "" : s.id)}
+                      className={`rounded-lg border px-3 py-1 text-xs font-bold transition ${
+                        isSelected
+                          ? "border-blue-600 bg-blue-600 text-white shadow"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
+                      }`}
+                    >
+                      {s.name}
+                    </button>
+                  );
+                })}
+            </div>
+          )}
+        </CollapsibleFilterGroup>
       )}
 
-      {/* Collections */}
+      {/* Collections Collapsible */}
       {collections.length > 0 && (
-        <div className="space-y-2 border-b pb-5">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-            Collections
-          </h3>
-          <div className="space-y-1">
-            {collections
-              .filter((c) => c.isActive)
-              .map((c) => {
-                const isSelected = collection === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => updateFilter("collection", isSelected ? "" : c.id)}
-                    className={`block w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition ${
-                      isSelected ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    {c.name}
-                  </button>
-                );
-              })}
-          </div>
-        </div>
+        <CollapsibleFilterGroup
+          title="Collections"
+          searchable={true}
+          searchPlaceholder="Search collection..."
+        >
+          {(searchQuery) => {
+            const filteredCollections = collections.filter((c) =>
+              c.name.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            return (
+              <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                {filteredCollections
+                  .filter((c) => c.isActive)
+                  .map((c) => {
+                    const isSelected = collection === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => updateFilter("collection", isSelected ? "" : c.id)}
+                        className={`block w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition ${
+                          isSelected ? "bg-blue-50 font-bold text-blue-700" : "text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        {c.name}
+                      </button>
+                    );
+                  })}
+              </div>
+            );
+          }}
+        </CollapsibleFilterGroup>
       )}
 
-      {/* Price Range Filter */}
-      <div className="space-y-2">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-          Price Range ($)
-        </h3>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            placeholder="Min"
-            value={minPrice || ""}
-            onChange={(e) => updateFilter("minPrice", e.target.value)}
-            className="w-full rounded-lg border border-slate-200 p-2 text-xs outline-none focus:border-blue-500"
-          />
-          <span className="text-slate-400">-</span>
-          <input
-            type="number"
-            placeholder="Max"
-            value={maxPrice || ""}
-            onChange={(e) => updateFilter("maxPrice", e.target.value)}
-            className="w-full rounded-lg border border-slate-200 p-2 text-xs outline-none focus:border-blue-500"
-          />
-        </div>
-      </div>
+      {/* Price Range Filter with explicit Search/Apply button */}
+      <CollapsibleFilterGroup title="Price Range ($)" searchable={false}>
+        {() => (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                placeholder="Min"
+                value={localMinPrice}
+                onChange={(e) => setLocalMinPrice(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 p-2 text-xs outline-none focus:border-blue-500"
+              />
+              <span className="text-slate-400">-</span>
+              <input
+                type="number"
+                placeholder="Max"
+                value={localMaxPrice}
+                onChange={(e) => setLocalMaxPrice(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 p-2 text-xs outline-none focus:border-blue-500"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleApplyPriceFilter}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow hover:bg-blue-700 transition"
+            >
+              <DollarSign size={14} /> Apply Price Filter
+            </button>
+          </div>
+        )}
+      </CollapsibleFilterGroup>
     </div>
   );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
       {/* Top Banner Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">{title}</h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <h1 className="text-xl font-black text-slate-900">{title}</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
             Showing {products.length} available items
           </p>
         </div>
@@ -382,9 +412,9 @@ const ProductsPageInner = () => {
         </button>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-[260px_1fr]">
+      <div className="grid gap-6 md:grid-cols-[250px_1fr]">
         {/* Desktop Sticky Filter Sidebar */}
-        <aside className="hidden md:block sticky top-28 h-max rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <aside className="hidden md:block sticky top-24 h-max rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           {filterContent}
         </aside>
 
