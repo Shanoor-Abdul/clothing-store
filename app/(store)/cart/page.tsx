@@ -34,14 +34,14 @@ const CartPage = () => {
         Shopping Cart ({totalItems})
       </h1>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4">
           {items.map((item) => {
             const key = item.variantId ?? item.productId;
             return (
               <div
                 key={key}
-                className="flex gap-4 rounded-xl border bg-white p-4"
+                className="flex flex-wrap sm:flex-nowrap gap-4 rounded-xl border bg-white p-4"
               >
                 {item.image && (
                   <Image
@@ -49,7 +49,7 @@ const CartPage = () => {
                     alt={item.name}
                     width={100}
                     height={100}
-                    className="h-24 w-24 rounded-lg object-cover"
+                    className="h-20 w-20 sm:h-24 sm:w-24 rounded-lg object-cover flex-shrink-0"
                   />
                 )}
 

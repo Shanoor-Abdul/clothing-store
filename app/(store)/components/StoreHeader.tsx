@@ -29,15 +29,15 @@ const StoreHeader = () => {
   const logout = useLogout();
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const isAuthenticated = useAppSelector(
-    (state) => state.auth.isAuthenticated
-  );
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const user = useAppSelector((state) => state.auth.user);
 
   const [searchValue, setSearchValue] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
-  const debouncedSearch = useDebounce(searchValue, 600);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _debouncedSearch = useDebounce(searchValue, 600);
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["header-categories"],
@@ -54,7 +54,6 @@ const StoreHeader = () => {
       const params = new URLSearchParams();
       if (trimmed) params.set("search", trimmed);
       if (catId || selectedCategory) params.set("category", catId || selectedCategory);
-
       router.push(`/products?${params.toString()}`);
     },
     [router, selectedCategory]
@@ -65,6 +64,7 @@ const StoreHeader = () => {
       e.preventDefault();
       performSearch(searchValue);
       searchRef.current?.blur();
+      setMobileSearchOpen(false);
     },
     [searchValue, performSearch]
   );
@@ -78,67 +78,83 @@ const StoreHeader = () => {
     }
   };
 
+  const SearchForm = ({ className = "" }: { className?: string }) => (
+    <form
+      onSubmit={handleSearchSubmit}
+      className={`flex items-center overflow-hidden rounded-xl border border-slate-700 bg-slate-800 text-slate-900 focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-400/20 ${className}`}
+    >
+      <select
+        value={selectedCategory}
+        onChange={(e) => setSelectedCategory(e.target.value)}
+        className="hidden sm:block border-r border-slate-700 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 outline-none hover:bg-slate-700 cursor-pointer"
+      >
+        <option value="">All Departments</option>
+        {categories.map((c) => (
+          <option key={c.id} value={c.id}>{c.name}</option>
+        ))}
+      </select>
+
+      <input
+        ref={searchRef}
+        type="text"
+        value={searchValue}
+        onChange={(e) => setSearchValue(e.target.value)}
+        placeholder="Search shirts, dresses, brands..."
+        className="w-full bg-slate-800 px-4 py-2 text-xs sm:text-sm text-white placeholder-slate-400 outline-none"
+      />
+
+      <button
+        type="submit"
+        className="flex h-10 w-11 items-center justify-center bg-blue-600 text-white hover:bg-blue-500 transition flex-shrink-0"
+        aria-label="Search"
+      >
+        <Search size={17} />
+      </button>
+    </form>
+  );
+
   return (
     <header className="sticky top-0 z-50 bg-slate-900 text-white shadow-md">
-      {/* Top Main Navigation Bar */}
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
+      {/* ── Main Navigation Row ── */}
+      <div className="mx-auto flex max-w-7xl items-center gap-2 sm:gap-4 px-3 sm:px-4 py-2.5 sm:py-3">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-white transition hover:text-sky-400">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-sky-400 text-white font-black shadow-md">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-lg sm:text-xl font-extrabold tracking-tight text-white transition hover:text-sky-400 flex-shrink-0"
+        >
+          <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-sky-400 text-white font-black shadow-md">
             S
           </span>
           <span className="hidden sm:inline">ClothingStore</span>
         </Link>
 
-        {/* Deliver To Location Pill */}
-        <div className="hidden lg:flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs hover:bg-slate-800 transition cursor-pointer">
-          <MapPin size={16} className="text-sky-400" />
+        {/* Deliver To — lg+ only */}
+        <div className="hidden lg:flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs hover:bg-slate-800 transition cursor-pointer flex-shrink-0">
+          <MapPin size={15} className="text-sky-400" />
           <div className="leading-tight">
             <p className="text-[10px] text-slate-400">Deliver to</p>
             <p className="font-bold text-white">Saudi Arabia</p>
           </div>
         </div>
 
-        {/* Search Bar with Category Dropdown */}
-        <form
-          onSubmit={handleSearchSubmit}
-          className="flex flex-1 max-w-2xl items-center overflow-hidden rounded-xl border border-slate-700 bg-slate-800 text-slate-900 focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-400/20"
-        >
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="hidden sm:block border-r border-slate-700 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 outline-none hover:bg-slate-700 cursor-pointer"
-          >
-            <option value="">All Departments</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+        {/* Search Bar — hidden on xs, shown on sm+ */}
+        <div className="hidden sm:flex flex-1 min-w-0">
+          <SearchForm className="w-full" />
+        </div>
 
-          <input
-            ref={searchRef}
-            type="text"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            placeholder="Search shirts, dresses, brands..."
-            className="w-full bg-slate-800 px-4 py-2 text-xs sm:text-sm text-white placeholder-slate-400 outline-none"
-          />
-
+        {/* Right Actions */}
+        <nav className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-auto sm:ml-0">
+          {/* Mobile search toggle */}
           <button
-            type="submit"
-            className="flex h-10 w-12 items-center justify-center bg-blue-600 text-white hover:bg-blue-500 transition"
+            className="sm:hidden flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 hover:bg-slate-800 transition"
+            onClick={() => setMobileSearchOpen((v) => !v)}
             aria-label="Search"
           >
-            <Search size={18} />
+            <Search size={19} />
           </button>
-        </form>
 
-        {/* User Account & Cart Navigation */}
-        <nav className="flex items-center gap-2 sm:gap-4">
           {isAuthenticated ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Link
                 href="/account/orders"
                 className="hidden md:flex flex-col text-left px-2 py-1 text-xs hover:bg-slate-800 rounded transition"
@@ -152,15 +168,15 @@ const StoreHeader = () => {
                 className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"
                 aria-label="Wishlist"
               >
-                <Heart size={20} />
+                <Heart size={19} />
               </Link>
 
               <Link
                 href="/account"
-                className="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 transition"
+                className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-800 transition"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                  {user?.name ? user.name[0].toUpperCase() : <User size={16} />}
+                <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white flex-shrink-0">
+                  {user?.name ? user.name[0].toUpperCase() : <User size={14} />}
                 </div>
                 <span className="hidden lg:inline text-xs font-semibold text-white">
                   {user?.name || "Account"}
@@ -172,13 +188,13 @@ const StoreHeader = () => {
                 className="flex h-9 w-9 items-center justify-center rounded-lg text-red-400 hover:bg-slate-800 hover:text-red-300 transition"
                 title="Sign Out"
               >
-                <LogOut size={18} />
+                <LogOut size={17} />
               </button>
             </div>
           ) : (
             <Link
               href="/login"
-              className="flex flex-col px-3 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 font-bold text-white transition shadow"
+              className="flex flex-col px-2.5 py-1.5 text-xs rounded bg-blue-600 hover:bg-blue-500 font-bold text-white transition shadow whitespace-nowrap"
             >
               <span>Sign In</span>
             </Link>
@@ -186,13 +202,13 @@ const StoreHeader = () => {
 
           <Link
             href="/cart"
-            className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition"
+            className="relative flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition"
             aria-label="Cart"
           >
-            <ShoppingCart size={20} className="text-sky-400" />
+            <ShoppingCart size={19} className="text-sky-400" />
             <span className="hidden sm:inline text-xs font-bold text-white">Cart</span>
             {totalItems > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black text-slate-950 shadow">
+              <span className="flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-amber-400 text-[9px] sm:text-[10px] font-black text-slate-950 shadow">
                 {totalItems}
               </span>
             )}
@@ -200,27 +216,34 @@ const StoreHeader = () => {
         </nav>
       </div>
 
-      {/* Secondary Amazon Sub-Header Navigation Ribbon */}
-      <div className="bg-slate-950 border-t border-slate-800/80 px-4 py-2 text-xs">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 overflow-x-auto whitespace-nowrap text-slate-300 scrollbar-none">
-          <Link href="/products" className="flex items-center gap-1 font-bold text-white hover:text-sky-400">
-            <Menu size={14} /> All Products
+      {/* ── Mobile Search Bar (dropdown below header) ── */}
+      {mobileSearchOpen && (
+        <div className="sm:hidden px-3 pb-3">
+          <SearchForm className="w-full" />
+        </div>
+      )}
+
+      {/* ── Sub-navigation Ribbon ── */}
+      <div className="bg-slate-950 border-t border-slate-800/80 px-3 sm:px-4 py-2 text-xs">
+        <div className="mx-auto flex max-w-7xl items-center gap-3 sm:gap-4 overflow-x-auto whitespace-nowrap text-slate-300 scrollbar-none">
+          <Link href="/products" className="flex items-center gap-1 font-bold text-white hover:text-sky-400 flex-shrink-0">
+            <Menu size={13} /> All
           </Link>
           <span className="text-slate-700">|</span>
-          <Link href="/products?featured=true" className="hover:text-white transition">
+          <Link href="/products?featured=true" className="hover:text-white transition flex-shrink-0">
             Featured Deals
           </Link>
           {categories.slice(0, 5).map((cat) => (
             <Link
               key={cat.id}
               href={`/products?category=${cat.id}`}
-              className="hover:text-white transition"
+              className="hover:text-white transition flex-shrink-0"
             >
               {cat.name}
             </Link>
           ))}
-          <Link href="/account/orders" className="hover:text-white transition ml-auto font-semibold text-sky-400">
-            Track Orders &rarr;
+          <Link href="/account/orders" className="hover:text-white transition ml-auto font-semibold text-sky-400 flex-shrink-0">
+            Track Orders →
           </Link>
         </div>
       </div>

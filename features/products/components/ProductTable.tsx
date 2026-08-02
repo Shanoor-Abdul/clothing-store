@@ -60,6 +60,7 @@ const ProductTable = ({
 
   return (
     <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+      <div className="overflow-x-auto">
       <table className="min-w-full">
         <thead className="bg-slate-100 text-slate-700">
           <tr>
@@ -220,6 +221,7 @@ const ProductTable = ({
           })}
         </tbody>
       </table>
+      </div>
 
       {/* Lightbox Zoom Modal */}
       {zoomImage && (

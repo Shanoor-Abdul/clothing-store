@@ -184,7 +184,7 @@ const HomePage = () => {
   );
 
   return (
-    <div className="mx-auto max-w-7xl space-y-10 px-4 py-6">
+    <div className="mx-auto max-w-7xl space-y-8 px-3 sm:px-4 py-4 sm:py-6">
       {/* 1. Main Hero Banner Carousel */}
       {banners.length > 0 && activeBanner ? (
         <section className="relative h-[280px] sm:h-[340px] md:h-[400px] w-full overflow-hidden rounded-2xl bg-slate-950 text-white shadow-lg">
@@ -280,7 +280,7 @@ const HomePage = () => {
       )}
 
       {/* 2. Top Trust Highlights Bar */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm">
         <div className="flex items-center gap-3 p-2">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
             <Truck size={20} />
@@ -335,7 +335,7 @@ const HomePage = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
             {activeCategories.slice(0, 8).map((category: Category) => {
               const matchedProduct = products.find(
                 (p) => p.categoryId === category.id || p.category?.id === category.id
@@ -393,7 +393,7 @@ const HomePage = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
             {activeCollections.slice(0, 3).map((collection: Collection) => (
               <Link
                 key={collection.id}

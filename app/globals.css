@@ -47,6 +47,12 @@ button {
   color: #0f172a;
 }
 
+/* Mobile sidebar slide-in animation */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0.6; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
 /* Sleek custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

@@ -107,7 +107,7 @@ const AdminDashboardPage = () => {
 
   return (
     <div className="space-y-10">
-      <div className="rounded-[2rem] bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 p-8 shadow-xl shadow-slate-900/30 sm:p-10">
+      <div className="rounded-[2rem] bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 p-5 sm:p-8 shadow-xl shadow-slate-900/30 sm:p-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-sky-300/80">
@@ -138,7 +138,7 @@ const AdminDashboardPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         <Link href="/admin/products">
           <DashboardCard
             title="Products"
@@ -174,7 +174,7 @@ const AdminDashboardPage = () => {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Clock size={20} className="text-slate-500" />
