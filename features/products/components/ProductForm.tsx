@@ -61,6 +61,8 @@ const ProductForm = ({
       categoryId: "",
       subcategoryId: undefined,
       brandId: undefined,
+      status: "PUBLISHED",
+      isReturnable: true,
       collectionIds: [],
       images: [],
       variants: [],
@@ -93,6 +95,8 @@ const ProductForm = ({
       categoryId: "",
       subcategoryId: undefined,
       brandId: undefined,
+      status: "PUBLISHED",
+      isReturnable: true,
       collectionIds: [],
       images: [],
       variants: [],
@@ -108,6 +112,11 @@ const ProductForm = ({
   const discountValue = watch("discount");
   const imagesValue = useWatch({ control, name: "images" });
   const imagePreviews = imagesValue ?? [];
+
+  // Filter subcategories by selected parent category if available
+  const availableSubcategories = categoryIdValue
+    ? subcategories.filter((sc: any) => !sc.parentId || sc.parentId === categoryIdValue)
+    : subcategories;
 
   useEffect(() => {
     if (nameValue) {
@@ -237,6 +246,21 @@ const ProductForm = ({
           </div>
 
           <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-700">Publishing Status</label>
+            <select
+              {...register("status")}
+              className="w-full rounded-lg border border-slate-300 p-3 text-sm font-bold bg-white outline-none focus:border-blue-500"
+            >
+              <option value="PUBLISHED">PUBLISHED (Live in store)</option>
+              <option value="DRAFT">DRAFT (Hidden)</option>
+              <option value="OUT_OF_STOCK">OUT_OF_STOCK</option>
+              <option value="ARCHIVED">ARCHIVED</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
             <label className="mb-1 block text-xs font-semibold text-slate-700">Category</label>
             <select
               {...register("categoryId")}
@@ -248,6 +272,19 @@ const ProductForm = ({
               ))}
             </select>
             {errors.categoryId && <p className="mt-1 text-xs text-red-500">{errors.categoryId.message}</p>}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-700">Subcategory (Optional)</label>
+            <select
+              {...register("subcategoryId")}
+              className="w-full rounded-lg border border-slate-300 p-3 text-sm bg-white outline-none focus:border-blue-500"
+            >
+              <option value="">Select Subcategory</option>
+              {availableSubcategories.map((sc) => (
+                <option key={sc.id} value={sc.id}>{sc.name}</option>
+              ))}
+            </select>
           </div>
         </div>
 
