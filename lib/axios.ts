@@ -16,7 +16,8 @@ api.interceptors.request.use(
         localStorage.getItem("cs_access_token") ||
         localStorage.getItem("token");
       if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        config.headers = config.headers || {};
+        config.headers.Authorization = "Bearer " + token;
       }
     }
     return config;
@@ -29,7 +30,14 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const config = error.config;
-    if (config && !config._retry && error.response?.status >= 500) {
+    const method = config?.method?.toString().toLowerCase();
+
+    if (
+      config &&
+      !config._retry &&
+      error.response?.status >= 500 &&
+      (method === "get" || method === "head" || method === "options")
+    ) {
       config._retry = true;
       await new Promise((resolve) => setTimeout(resolve, 800));
       return api(config);
