@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback } from "react";
+import { Suspense, useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -79,6 +79,12 @@ const ProductsPageInner = () => {
   // Local state for Price inputs to prevent triggering API on every keystroke
   const [localMinPrice, setLocalMinPrice] = useState(minPrice || "");
   const [localMaxPrice, setLocalMaxPrice] = useState(maxPrice || "");
+
+  // Sync local price inputs with URL search parameters
+  useEffect(() => {
+    setLocalMinPrice(minPrice || "");
+    setLocalMaxPrice(maxPrice || "");
+  }, [minPrice, maxPrice]);
 
   const query = new URLSearchParams();
   if (category) query.set("category", category);
@@ -160,7 +166,7 @@ const ProductsPageInner = () => {
   }, [router]);
 
   const hasActiveFilters =
-    category || brand || search || featured || color || size || collection || minPrice || maxPrice;
+    Boolean(category || brand || search || featured || color || size || collection || minPrice || maxPrice);
 
   const title = search
     ? `Results for "${search}"`
