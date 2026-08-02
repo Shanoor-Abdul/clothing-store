@@ -6,17 +6,16 @@ export const mapProductToForm = (
   name: product.name ?? "",
   slug: product.slug ?? "",
   description: product.description ?? "",
-  status: product.status ?? "DRAFT",
+  status: product.status ?? "PUBLISHED",
   sku: product.sku ?? "",
-  shortDescription: product.shortDescription ?? "",
   categoryId: product.categoryId ?? "",
+  subcategoryId: product.subcategoryId ?? "",
   brandId: product.brandId ?? "",
   collectionIds:
     product.collections?.map(
       (c: any) => c.collectionId ?? c.collection?.id ?? c.id
     ) ?? [],
   material: product.material ?? "",
-  weight: product.weight ? Number(product.weight) : undefined,
   price: Number(product.price ?? 0),
   discount: product.discount ? Number(product.discount) : undefined,
   sellingPrice: Number(product.sellingPrice ?? 0),

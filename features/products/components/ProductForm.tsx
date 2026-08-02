@@ -1,10 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useCallback, useState } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Upload, X, Plus, Trash2 } from "lucide-react";
+import { Upload, X, Plus, Trash2, Tag, CheckSquare, Sparkles, ShieldCheck } from "lucide-react";
 
 import {
   ProductSchema,
@@ -26,6 +25,45 @@ interface ProductFormProps {
   editingProduct?: any;
   onCancel?: () => void;
 }
+
+// Canvas-based image compressor to convert multi-megabyte photos into lightweight ~100KB JPEG data URLs
+const compressImageFile = (file: File): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 900;
+        const MAX_HEIGHT = 900;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+        // High-compression 0.75 JPEG
+        const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.75);
+        resolve(compressedDataUrl);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
 const ProductForm = ({
   onSubmit,
@@ -61,13 +99,14 @@ const ProductForm = ({
       categoryId: "",
       subcategoryId: undefined,
       brandId: undefined,
+      material: "",
       status: "PUBLISHED",
       isReturnable: true,
+      isFeatured: false,
+      isActive: true,
       collectionIds: [],
       images: [],
       variants: [],
-      isActive: true,
-      isFeatured: false,
       ...defaultValues,
     },
   });
@@ -83,6 +122,8 @@ const ProductForm = ({
   const [builderPrice, setBuilderPrice] = useState<string>("");
   const [builderStock, setBuilderStock] = useState<string>("10");
 
+  const collectionIdsValue = watch("collectionIds") || [];
+
   useEffect(() => {
     reset({
       name: "",
@@ -95,13 +136,14 @@ const ProductForm = ({
       categoryId: "",
       subcategoryId: undefined,
       brandId: undefined,
+      material: "",
       status: "PUBLISHED",
       isReturnable: true,
+      isFeatured: false,
+      isActive: true,
       collectionIds: [],
       images: [],
       variants: [],
-      isActive: true,
-      isFeatured: false,
       ...defaultValues,
     });
   }, [defaultValues, reset]);
@@ -139,6 +181,7 @@ const ProductForm = ({
     setValue("sellingPrice", sellingPrice, { shouldValidate: true });
   }, [priceValue, discountValue, setValue]);
 
+  // Handle high-performance compressed image upload
   const handleMultipleImageUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
@@ -146,28 +189,20 @@ const ProductForm = ({
 
       const currentImages = watch("images") || [];
 
-      const readPromises = files.map((file, idx) => {
-        return new Promise<{ imageUrl: string; altText?: string; displayOrder: number }>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            resolve({
-              imageUrl: reader.result as string,
-              altText: file.name,
-              displayOrder: currentImages.length + idx,
-            });
-          };
-          reader.readAsDataURL(file);
-        });
-      });
-
       try {
-        const newImageObjs = await Promise.all(readPromises);
+        const compressedUrls = await Promise.all(files.map((file) => compressImageFile(file)));
+        const newImageObjs = compressedUrls.map((dataUrl, idx) => ({
+          imageUrl: dataUrl,
+          altText: files[idx]?.name || "Product Image",
+          displayOrder: currentImages.length + idx + 1,
+        }));
+
         setValue("images", [...currentImages, ...newImageObjs], {
           shouldDirty: true,
           shouldValidate: true,
         });
       } catch (err) {
-        console.error("Error reading uploaded images:", err);
+        console.error("Error compressing uploaded images:", err);
       }
 
       e.target.value = "";
@@ -186,6 +221,16 @@ const ProductForm = ({
     },
     [setValue, watch]
   );
+
+  // Toggle collection check handler
+  const toggleCollection = (id: string) => {
+    const current = watch("collectionIds") || [];
+    if (current.includes(id)) {
+      setValue("collectionIds", current.filter((cId) => cId !== id), { shouldDirty: true });
+    } else {
+      setValue("collectionIds", [...current, id], { shouldDirty: true });
+    }
+  };
 
   // Add Combined Variant (Color + Size + Price + Stock combined)
   const handleAddCombinedVariant = useCallback(() => {
@@ -222,7 +267,6 @@ const ProductForm = ({
 
   const handleFormSubmit = (data: ProductFormData) => {
     onSubmit(data);
-    reset(); // Auto-clear form after submission
   };
 
   return (
@@ -252,8 +296,8 @@ const ProductForm = ({
               className="w-full rounded-lg border border-slate-300 p-3 text-sm font-bold bg-white outline-none focus:border-blue-500"
             >
               <option value="PUBLISHED">PUBLISHED (Live in store)</option>
-              <option value="DRAFT">DRAFT (Hidden)</option>
-              <option value="OUT_OF_STOCK">OUT_OF_STOCK</option>
+              <option value="DRAFT">DRAFT (Hidden draft)</option>
+              <option value="OUT_OF_STOCK">OUT OF STOCK</option>
               <option value="ARCHIVED">ARCHIVED</option>
             </select>
           </div>
@@ -288,12 +332,12 @@ const ProductForm = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div>
             <label className="mb-1 block text-xs font-semibold text-slate-700">Product SKU</label>
             <input
               {...register("sku")}
-              className="w-full rounded-lg border border-slate-200 bg-slate-100 p-3 text-sm text-slate-600"
+              className="w-full rounded-lg border border-slate-200 bg-slate-100 p-3 text-sm text-slate-600 font-mono"
               readOnly
             />
           </div>
@@ -310,17 +354,118 @@ const ProductForm = ({
               ))}
             </select>
           </div>
+
+          {/* Material Field */}
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-700">Material / Fabric (Optional)</label>
+            <input
+              {...register("material")}
+              placeholder="e.g. 100% Pure Silk, Organic Cotton, Chiffon"
+              className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
+            />
+          </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-semibold text-slate-700">Description</label>
+          <label className="mb-1 block text-xs font-semibold text-slate-700">Detailed Description</label>
           <textarea
             {...register("description")}
             rows={4}
-            placeholder="Detailed description of fabric, design, and style..."
+            placeholder="Detailed description of fabric, design, care instructions, and style..."
             className="w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-blue-500"
           />
           {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>}
+        </div>
+      </div>
+
+      {/* Product Collections Assignment Section */}
+      {collections.length > 0 && (
+        <div className="space-y-3 border-t pt-6">
+          <h2 className="text-xl font-bold text-slate-900 border-b pb-3 flex items-center gap-2">
+            <Tag size={20} className="text-purple-600" /> Assign Collections
+          </h2>
+          <p className="text-xs text-slate-500">
+            Select one or more store collections to feature this product under:
+          </p>
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            {collections.map((col) => {
+              const isSelected = collectionIdsValue.includes(col.id);
+              return (
+                <button
+                  type="button"
+                  key={col.id}
+                  onClick={() => toggleCollection(col.id)}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition border ${
+                    isSelected
+                      ? "bg-purple-600 text-white border-purple-600 shadow"
+                      : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                  }`}
+                >
+                  <CheckSquare size={14} className={isSelected ? "text-white" : "text-slate-400"} />
+                  {col.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Product Display Flags & Preferences */}
+      <div className="space-y-4 border-t pt-6">
+        <h2 className="text-xl font-bold text-slate-900 border-b pb-3 flex items-center gap-2">
+          <Sparkles size={20} className="text-amber-500" /> Display Preferences & Visibility Flags
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* isActive */}
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 cursor-pointer hover:border-slate-300 transition">
+            <input
+              type="checkbox"
+              {...register("isActive")}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <div>
+              <span className="text-sm font-bold text-slate-900 block">Active Product</span>
+              <span className="text-xs text-slate-500 leading-relaxed block mt-0.5">
+                Enable to show this product in storefront search and categories.
+              </span>
+            </div>
+          </label>
+
+          {/* isFeatured */}
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 cursor-pointer hover:border-slate-300 transition">
+            <input
+              type="checkbox"
+              {...register("isFeatured")}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+            />
+            <div>
+              <span className="text-sm font-bold text-slate-900 block flex items-center gap-1">
+                Featured Product <Sparkles size={14} className="text-amber-500" />
+              </span>
+              <span className="text-xs text-slate-500 leading-relaxed block mt-0.5">
+                Display this product in the Homepage &quot;Featured Showcase&quot; section.
+              </span>
+            </div>
+          </label>
+
+          {/* isReturnable */}
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 cursor-pointer hover:border-slate-300 transition">
+            <input
+              type="checkbox"
+              {...register("isReturnable")}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <div>
+              <span className="text-sm font-bold text-slate-900 block flex items-center gap-1">
+                Return Eligible <ShieldCheck size={14} className="text-emerald-600" />
+              </span>
+              <span className="text-xs text-slate-500 leading-relaxed block mt-0.5">
+                Allows customers to see the 24-Hour Return Window button on delivered orders.
+              </span>
+            </div>
+          </label>
         </div>
       </div>
 
@@ -361,13 +506,13 @@ const ProductForm = ({
         </div>
       </div>
 
-      {/* Product Images */}
+      {/* Product Images Upload */}
       <div className="space-y-4 border-t pt-6">
         <h2 className="text-xl font-bold text-slate-900 border-b pb-3">Product Images</h2>
         <label className="flex cursor-pointer items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-300 p-8 transition hover:border-blue-500 hover:bg-blue-50/50">
           <Upload size={24} className="text-slate-400" />
           <span className="text-sm font-semibold text-slate-700">
-            Click to select multiple product photos
+            Click to select high-res photos (Auto-compressed for fast loading)
           </span>
           <input
             type="file"

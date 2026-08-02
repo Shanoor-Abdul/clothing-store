@@ -5,24 +5,22 @@ export const ProductSchema = z.object({
   slug: z.string().trim().min(2, "Slug is required"),
   sku: z.string().trim().min(2, "SKU is required"),
   description: z.string().trim().min(5, "Description is required"),
-  shortDescription: z.string().optional(),
   categoryId: z.string().min(1, "Category is required"),
   subcategoryId: z.string().optional().nullable(),
-  brandId: z.string().optional(),
+  brandId: z.string().optional().nullable(),
   collectionIds: z.array(z.string()).default([]),
-  material: z.string().optional(),
-  weight: z.coerce.number().optional(),
+  material: z.string().optional().nullable(),
   price: z.coerce.number().min(0),
-  discount: z.coerce.number().optional(),
+  discount: z.coerce.number().optional().nullable(),
   sellingPrice: z.coerce.number().min(0),
   status: z.enum(["DRAFT", "PUBLISHED", "OUT_OF_STOCK", "ARCHIVED"]),
-  isReturnable: z.boolean(),
-  isFeatured: z.boolean(),
-  isActive: z.boolean(),
+  isReturnable: z.boolean().default(true),
+  isFeatured: z.boolean().default(false),
+  isActive: z.boolean().default(true),
 
   images: z.array(z.object({
     imageUrl: z.string(),
-    altText: z.string().optional(),
+    altText: z.string().optional().nullable(),
     displayOrder: z.number().optional(),
   })).optional().default([]),
 
@@ -59,20 +57,18 @@ export interface ProductFormData {
   slug: string;
   sku: string;
   description: string;
-  shortDescription?: string;
   categoryId: string;
   subcategoryId?: string | null;
-  brandId?: string;
+  brandId?: string | null;
   collectionIds: string[];
-  material?: string;
-  weight?: number;
+  material?: string | null;
   price: number;
-  discount?: number;
+  discount?: number | null;
   sellingPrice: number;
   status: "DRAFT" | "PUBLISHED" | "OUT_OF_STOCK" | "ARCHIVED";
   isReturnable: boolean;
   isFeatured: boolean;
   isActive: boolean;
-  images: Array<{ imageUrl: string; altText?: string; displayOrder?: number }>;
+  images: Array<{ imageUrl: string; altText?: string | null; displayOrder?: number }>;
   variants: VariantFormItem[];
 }

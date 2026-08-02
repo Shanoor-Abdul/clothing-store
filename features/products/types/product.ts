@@ -1,3 +1,5 @@
+import { VariantFormItem } from "../validation/product.schema";
+
 export interface Option {
   id: string;
   name: string;
@@ -11,13 +13,11 @@ export interface Product {
   sku: string;
 
   description: string;
-  shortDescription?: string | null;
 
   price: number;
   discount?: number | null;
   sellingPrice: number;
 
-  weight?: number | null;
   material?: string | null;
 
   isReturnable: boolean;
@@ -134,14 +134,12 @@ export interface CreateProductPayload {
   sku: string;
 
   description: string;
-  shortDescription?: string;
 
   price: number;
-  discount?: number;
+  discount?: number | null;
   sellingPrice: number;
 
-  weight?: number;
-  material?: string;
+  material?: string | null;
 
   status: ProductStatus;
 
@@ -151,9 +149,11 @@ export interface CreateProductPayload {
 
   categoryId: string;
   subcategoryId?: string | null;
-  brandId?: string;
+  brandId?: string | null;
 
   collectionIds?: string[];
+  images?: Array<{ imageUrl: string; altText?: string | null; displayOrder?: number }>;
+  variants?: VariantFormItem[];
 }
 
 export type UpdateProductPayload =

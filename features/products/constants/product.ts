@@ -7,16 +7,15 @@ export const PRODUCT_DEFAULT_VALUES: ProductFormData = {
   slug: "",
   sku: "",
   description: "",
-  shortDescription: "",
   categoryId: "",
-  brandId: "",
+  subcategoryId: undefined,
+  brandId: undefined,
   collectionIds: [],
   material: "",
-  weight: undefined,
   price: 0,
   discount: 0,
   sellingPrice: 0,
-  status: "DRAFT",
+  status: "PUBLISHED",
   isReturnable: true,
   isFeatured: false,
   isActive: true,
@@ -25,8 +24,8 @@ export const PRODUCT_DEFAULT_VALUES: ProductFormData = {
 };
 
 export const PRODUCT_STATUS_OPTIONS = [
-  { label: "Draft", value: "DRAFT" },
   { label: "Published", value: "PUBLISHED" },
+  { label: "Draft", value: "DRAFT" },
   { label: "Out Of Stock", value: "OUT_OF_STOCK" },
   { label: "Archived", value: "ARCHIVED" },
 ] as const;

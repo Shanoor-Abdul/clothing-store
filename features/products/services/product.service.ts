@@ -64,7 +64,7 @@ export class ProductService {
     });
 
     if (exists) {
-      throw new Error("Product already exists.");
+      throw new Error("Product with this SKU or Slug already exists.");
     }
 
     const formattedImages: { imageUrl: string; altText: string; displayOrder: number }[] = [];
@@ -104,16 +104,14 @@ export class ProductService {
         slug: data.slug,
         sku: data.sku,
         description: data.description,
-        shortDescription: data.shortDescription || null,
         price: data.price,
         discount: data.discount || null,
         sellingPrice: data.sellingPrice,
-        weight: data.weight || null,
         material: data.material || null,
         status: data.status,
-        isReturnable: data.isReturnable,
-        isFeatured: data.isFeatured,
-        isActive: data.isActive,
+        isReturnable: data.isReturnable ?? true,
+        isFeatured: data.isFeatured ?? false,
+        isActive: data.isActive ?? true,
         category: {
           connect: {
             id: data.categoryId,
@@ -232,16 +230,14 @@ export class ProductService {
         slug: data.slug,
         sku: data.sku,
         description: data.description,
-        shortDescription: data.shortDescription || null,
         price: data.price,
         discount: data.discount || null,
         sellingPrice: data.sellingPrice,
-        weight: data.weight || null,
         material: data.material || null,
         status: data.status,
-        isReturnable: data.isReturnable,
-        isFeatured: data.isFeatured,
-        isActive: data.isActive,
+        isReturnable: data.isReturnable ?? true,
+        isFeatured: data.isFeatured ?? false,
+        isActive: data.isActive ?? true,
         category: {
           connect: {
             id: data.categoryId,
