@@ -11,38 +11,48 @@ type RecentOrder = Prisma.OrderGetPayload<{
 
 export async function GET() {
   try {
-    // Run queries sequentially with safe fallbacks
-    const totalProducts = await prisma.product.count({ where: { isActive: true } }).catch(() => 0);
-    const totalCategories = await prisma.category.count({ where: { isActive: true } }).catch(() => 0);
-    const totalOrders = await prisma.order.count().catch(() => 0);
-    const totalCustomers = await prisma.user.count({ where: { isActive: true } }).catch(() => 0);
-    
-    const recentOrders = (await prisma.order.findMany({
-      take: 5,
-      orderBy: { createdAt: "desc" },
-      include: {
-        items: true,
-        user: { select: { name: true, email: true } },
-      },
-    }).catch(() => [])) as RecentOrder[];
+    // Run all dashboard database queries concurrently in parallel with Promise.all
+    const [
+      totalProducts,
+      totalCategories,
+      totalOrders,
+      totalCustomers,
+      recentOrdersResult,
+      ordersByStatusResult,
+      totalRevenueResult,
+    ] = await Promise.all([
+      prisma.product.count({ where: { isActive: true } }).catch(() => 0),
+      prisma.category.count({ where: { isActive: true } }).catch(() => 0),
+      prisma.order.count().catch(() => 0),
+      prisma.user.count({ where: { isActive: true } }).catch(() => 0),
+      prisma.order.findMany({
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        include: {
+          items: true,
+          user: { select: { name: true, email: true } },
+        },
+      }).catch(() => []),
+      prisma.order.groupBy({
+        by: ["status"],
+        _count: { id: true },
+      }).catch(() => []),
+      prisma.order.aggregate({
+        _sum: { total: true },
+        where: {
+          OR: [
+            { status: "DELIVERED" },
+            { paymentStatus: "PAID" },
+          ],
+        },
+      }).catch(() => ({ _sum: { total: null } })),
+    ]);
 
-    const ordersByStatus = await prisma.order.groupBy({
-      by: ["status"],
-      _count: { id: true },
-    }).catch(() => []);
+    const recentOrders = (recentOrdersResult || []) as RecentOrder[];
+    const ordersByStatus = ordersByStatusResult || [];
 
-    const totalRevenue = await prisma.order.aggregate({
-      _sum: { total: true },
-      where: {
-        OR: [
-          { status: "DELIVERED" },
-          { paymentStatus: "PAID" },
-        ],
-      },
-    }).catch(() => ({ _sum: { total: null } }));
-
-    const formattedRevenue = totalRevenue?._sum?.total
-      ? Number(totalRevenue._sum.total)
+    const formattedRevenue = totalRevenueResult?._sum?.total
+      ? Number(totalRevenueResult._sum.total)
       : 0;
 
     const formattedRecentOrders = recentOrders.map((order: RecentOrder) => ({

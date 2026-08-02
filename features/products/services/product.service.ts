@@ -172,23 +172,12 @@ export class ProductService {
       throw new Error("Product with this SKU or Slug already exists.");
     }
 
-    await prisma.productCollection.deleteMany({
-      where: {
-        productId: id,
-      },
-    });
-
-    await prisma.productImage.deleteMany({
-      where: {
-        productId: id,
-      },
-    });
-
-    await prisma.productVariant.deleteMany({
-      where: {
-        productId: id,
-      },
-    });
+    // Run deleteMany operations in parallel
+    await Promise.all([
+      prisma.productCollection.deleteMany({ where: { productId: id } }),
+      prisma.productImage.deleteMany({ where: { productId: id } }),
+      prisma.productVariant.deleteMany({ where: { productId: id } }),
+    ]);
 
     const formattedImages: { imageUrl: string; altText: string; displayOrder: number }[] = [];
     if (data.images && data.images.length > 0) {
