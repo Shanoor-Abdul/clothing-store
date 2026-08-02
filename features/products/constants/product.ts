@@ -20,6 +20,7 @@ export const PRODUCT_DEFAULT_VALUES: ProductFormData = {
   isFeatured: false,
   isActive: true,
   images: [],
+  videos: [],
   variants: [],
 };
 

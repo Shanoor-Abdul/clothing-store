@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Upload, X, Plus, Trash2, Tag, CheckSquare, Sparkles, ShieldCheck } from "lucide-react";
+import { Upload, X, Plus, Trash2, Tag, CheckSquare, Sparkles, ShieldCheck, Film, Video } from "lucide-react";
 
 import {
   ProductSchema,
@@ -26,7 +26,7 @@ interface ProductFormProps {
   onCancel?: () => void;
 }
 
-// Canvas-based image compressor to convert multi-megabyte photos into lightweight ~100KB JPEG data URLs
+// Canvas-based image compressor to convert multi-megabyte photos into lightweight ~40KB JPEG data URLs
 const compressImageFile = (file: File): Promise<string> => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -34,8 +34,8 @@ const compressImageFile = (file: File): Promise<string> => {
       const img = new window.Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 900;
-        const MAX_HEIGHT = 900;
+        const MAX_WIDTH = 750;
+        const MAX_HEIGHT = 750;
         let width = img.width;
         let height = img.height;
 
@@ -55,8 +55,8 @@ const compressImageFile = (file: File): Promise<string> => {
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         ctx?.drawImage(img, 0, 0, width, height);
-        // High-compression 0.75 JPEG
-        const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.75);
+        // High-compression 0.65 JPEG
+        const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.65);
         resolve(compressedDataUrl);
       };
       img.src = event.target?.result as string;
@@ -106,6 +106,7 @@ const ProductForm = ({
       isActive: true,
       collectionIds: [],
       images: [],
+      videos: [],
       variants: [],
       ...defaultValues,
     },
@@ -122,7 +123,11 @@ const ProductForm = ({
   const [builderPrice, setBuilderPrice] = useState<string>("");
   const [builderStock, setBuilderStock] = useState<string>("10");
 
+  // State for Video URL input
+  const [videoUrlInput, setVideoUrlInput] = useState<string>("");
+
   const collectionIdsValue = watch("collectionIds") || [];
+  const videosValue = watch("videos") || [];
 
   useEffect(() => {
     reset({
@@ -143,6 +148,7 @@ const ProductForm = ({
       isActive: true,
       collectionIds: [],
       images: [],
+      videos: [],
       variants: [],
       ...defaultValues,
     });
@@ -216,6 +222,56 @@ const ProductForm = ({
       setValue(
         "images",
         currentImages.filter((_: unknown, i: number) => i !== index),
+        { shouldDirty: true }
+      );
+    },
+    [setValue, watch]
+  );
+
+  // Video Upload / Video URL handlers
+  const handleVideoFileUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const currentVideos = watch("videos") || [];
+        setValue(
+          "videos",
+          [
+            ...currentVideos,
+            { videoUrl: reader.result as string, thumbnailUrl: null, duration: null },
+          ],
+          { shouldDirty: true, shouldValidate: true }
+        );
+      };
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    },
+    [setValue, watch]
+  );
+
+  const handleAddVideoUrl = () => {
+    if (!videoUrlInput.trim()) return;
+    const currentVideos = watch("videos") || [];
+    setValue(
+      "videos",
+      [
+        ...currentVideos,
+        { videoUrl: videoUrlInput.trim(), thumbnailUrl: null, duration: null },
+      ],
+      { shouldDirty: true, shouldValidate: true }
+    );
+    setVideoUrlInput("");
+  };
+
+  const removeVideo = useCallback(
+    (index: number) => {
+      const currentVideos = watch("videos") || [];
+      setValue(
+        "videos",
+        currentVideos.filter((_: unknown, i: number) => i !== index),
         { shouldDirty: true }
       );
     },
@@ -539,6 +595,75 @@ const ProductForm = ({
                   type="button"
                   onClick={() => removeImage(index)}
                   className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white shadow hover:bg-red-700 transition"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Product Showcase Video Upload & Video URL */}
+      <div className="space-y-4 border-t pt-6">
+        <h2 className="text-xl font-bold text-slate-900 border-b pb-3 flex items-center gap-2">
+          <Film size={20} className="text-rose-600" /> Product Showcase Videos & 360° Fit Reels
+        </h2>
+        <p className="text-xs text-slate-500">
+          Upload short MP4/WEBM videos or paste video streaming URLs (*e.g. Cloudinary, MP4 link, or S3 bucket*):
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Direct File Upload */}
+          <label className="flex cursor-pointer items-center justify-center gap-3 rounded-xl border-2 border-dashed border-rose-200 bg-rose-50/40 p-6 transition hover:border-rose-400 hover:bg-rose-50">
+            <Video size={24} className="text-rose-500" />
+            <span className="text-xs font-bold text-rose-800">
+              Upload MP4 / WEBM Video File
+            </span>
+            <input
+              type="file"
+              accept="video/mp4,video/webm,video/quicktime"
+              hidden
+              onChange={handleVideoFileUpload}
+            />
+          </label>
+
+          {/* Paste Video URL */}
+          <div className="flex gap-2 items-center">
+            <input
+              type="url"
+              placeholder="Paste Video URL (https://.../video.mp4)"
+              value={videoUrlInput}
+              onChange={(e) => setVideoUrlInput(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 p-3 text-xs outline-none focus:border-rose-500"
+            />
+            <button
+              type="button"
+              onClick={handleAddVideoUrl}
+              className="shrink-0 rounded-xl bg-rose-600 px-4 py-3 text-xs font-bold text-white hover:bg-rose-700 transition shadow"
+            >
+              Add Video
+            </button>
+          </div>
+        </div>
+
+        {/* Uploaded Videos List Preview */}
+        {videosValue.length > 0 && (
+          <div className="flex flex-wrap gap-4 pt-3">
+            {videosValue.map((vid, index) => (
+              <div
+                key={index}
+                className="relative w-64 rounded-xl border border-slate-200 overflow-hidden bg-slate-900 p-1 shadow-sm"
+              >
+                <video
+                  src={vid.videoUrl}
+                  controls
+                  className="w-full h-36 object-cover rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeVideo(index)}
+                  className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white shadow hover:bg-red-700 transition z-10"
                 >
                   <X size={14} />
                 </button>

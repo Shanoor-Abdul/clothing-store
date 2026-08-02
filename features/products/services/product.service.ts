@@ -81,6 +81,20 @@ export class ProductService {
       });
     }
 
+    const formattedVideos: { videoUrl: string; thumbnailUrl: string | null; duration: number | null }[] = [];
+    if (data.videos && data.videos.length > 0) {
+      data.videos.forEach((vid: any) => {
+        const url = typeof vid === "string" ? vid : vid?.videoUrl;
+        if (url) {
+          formattedVideos.push({
+            videoUrl: url,
+            thumbnailUrl: typeof vid === "object" && vid?.thumbnailUrl ? vid.thumbnailUrl : null,
+            duration: typeof vid === "object" && typeof vid?.duration === "number" ? vid.duration : null,
+          });
+        }
+      });
+    }
+
     const formattedVariants: { sku: string; stock: number; barcode: string | null; price: number | null; isActive: boolean; colorId: string | null; sizeId: string | null }[] = [];
     if (data.variants && data.variants.length > 0) {
       data.variants.forEach((v: any) => {
@@ -137,6 +151,12 @@ export class ProductService {
                 create: formattedImages,
               }
             : undefined,
+        videos:
+          formattedVideos.length > 0
+            ? {
+                create: formattedVideos,
+              }
+            : undefined,
         variants:
           formattedVariants.length > 0
             ? {
@@ -176,6 +196,7 @@ export class ProductService {
     await Promise.all([
       prisma.productCollection.deleteMany({ where: { productId: id } }),
       prisma.productImage.deleteMany({ where: { productId: id } }),
+      prisma.productVideo.deleteMany({ where: { productId: id } }),
       prisma.productVariant.deleteMany({ where: { productId: id } }),
     ]);
 
@@ -188,6 +209,20 @@ export class ProductService {
             imageUrl: url,
             altText: typeof img === "object" && img?.altText ? img.altText : `${data.name}-${idx + 1}`,
             displayOrder: typeof img === "object" && typeof img?.displayOrder === "number" ? img.displayOrder : idx + 1,
+          });
+        }
+      });
+    }
+
+    const formattedVideos: { videoUrl: string; thumbnailUrl: string | null; duration: number | null }[] = [];
+    if (data.videos && data.videos.length > 0) {
+      data.videos.forEach((vid: any) => {
+        const url = typeof vid === "string" ? vid : vid?.videoUrl;
+        if (url) {
+          formattedVideos.push({
+            videoUrl: url,
+            thumbnailUrl: typeof vid === "object" && vid?.thumbnailUrl ? vid.thumbnailUrl : null,
+            duration: typeof vid === "object" && typeof vid?.duration === "number" ? vid.duration : null,
           });
         }
       });
@@ -254,6 +289,12 @@ export class ProductService {
           formattedImages.length > 0
             ? {
                 create: formattedImages,
+              }
+            : undefined,
+        videos:
+          formattedVideos.length > 0
+            ? {
+                create: formattedVideos,
               }
             : undefined,
         variants:

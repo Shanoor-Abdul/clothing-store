@@ -24,6 +24,12 @@ export const ProductSchema = z.object({
     displayOrder: z.number().optional(),
   })).optional().default([]),
 
+  videos: z.array(z.object({
+    videoUrl: z.string(),
+    thumbnailUrl: z.string().optional().nullable(),
+    duration: z.number().optional().nullable(),
+  })).optional().default([]),
+
   variants: z
     .array(
       z.object({
@@ -70,5 +76,6 @@ export interface ProductFormData {
   isFeatured: boolean;
   isActive: boolean;
   images: Array<{ imageUrl: string; altText?: string | null; displayOrder?: number }>;
+  videos?: Array<{ videoUrl: string; thumbnailUrl?: string | null; duration?: number | null }>;
   variants: VariantFormItem[];
 }

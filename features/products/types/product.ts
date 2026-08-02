@@ -153,6 +153,7 @@ export interface CreateProductPayload {
 
   collectionIds?: string[];
   images?: Array<{ imageUrl: string; altText?: string | null; displayOrder?: number }>;
+  videos?: Array<{ videoUrl: string; thumbnailUrl?: string | null; duration?: number | null }>;
   variants?: VariantFormItem[];
 }
 

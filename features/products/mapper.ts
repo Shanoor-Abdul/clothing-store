@@ -29,6 +29,13 @@ export const mapProductToForm = (
       altText: img.altText ?? "",
       displayOrder: img.displayOrder ?? 0,
     })) ?? [],
+  videos:
+    product.videos?.map((vid: any) => ({
+      id: vid.id,
+      videoUrl: vid.videoUrl,
+      thumbnailUrl: vid.thumbnailUrl ?? "",
+      duration: vid.duration ?? null,
+    })) ?? [],
   variants:
     product.variants?.map(
       (v: any): VariantFormItem => ({
