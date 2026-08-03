@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -17,6 +17,8 @@ import { useAppSelector } from "@/store";
 
 const LoginPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/products";
   const loginMutation = useUserLogin();
   const isAuthenticated = useAppSelector(
     (state) => state.auth.isAuthenticated
@@ -25,9 +27,9 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace(role === "ADMIN" ? "/admin" : "/products");
+      router.replace(role === "ADMIN" ? "/admin" : redirectUrl);
     }
-  }, [isAuthenticated, role, router]);
+  }, [isAuthenticated, role, router, redirectUrl]);
 
   const {
     register,
@@ -42,7 +44,7 @@ const LoginPage = () => {
     try {
       await loginMutation.mutateAsync(data);
       toast.success("Login successful");
-      router.replace("/products");
+      router.replace(redirectUrl);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Login failed"

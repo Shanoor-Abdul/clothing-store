@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
@@ -30,15 +30,6 @@ const CheckoutPage = () => {
     country: "Saudi Arabia",
   });
   const [paymentMethod, setPaymentMethod] = useState("COD");
-
-  useEffect(() => {
-    if (user) {
-      setAddress((prev) => ({
-        ...prev,
-        fullName: prev.fullName || user.name,
-      }));
-    }
-  }, [user]);
 
   if (!isAuthenticated) {
     return (
@@ -82,14 +73,19 @@ const CheckoutPage = () => {
       </div>
     );
   }
-
+debugger
   const handlePlaceOrder = async () => {
     try {
       setPlacing(true);
 
+      const finalAddress = {
+        ...address,
+        fullName: address.fullName || user?.name || "",
+      };
+
       const required = ["fullName", "phone", "street", "city"];
       const missing = required.some(
-        (k) => !address[k as keyof typeof address].trim()
+        (k) => !finalAddress[k as keyof typeof finalAddress].trim()
       );
 
       if (missing) {
@@ -104,7 +100,7 @@ const CheckoutPage = () => {
           quantity: i.quantity,
           price: i.sellingPrice,
         })),
-        address,
+        address: finalAddress,
         paymentMethod,
         total: subtotal,
       };
@@ -134,7 +130,7 @@ const CheckoutPage = () => {
             <div className="grid gap-4 sm:grid-cols-2">
               <input
                 placeholder="Full Name *"
-                value={address.fullName}
+                value={address.fullName || user?.name || ""}
                 onChange={(e) =>
                   setAddress({ ...address, fullName: e.target.value })
                 }

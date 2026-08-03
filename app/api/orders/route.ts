@@ -10,9 +10,7 @@ import { randomNumber } from "@/utils";
 
 export async function POST(request: NextRequest) {
   try {
-    const token =
-      request.cookies.get("cs_access_token")?.value;
-    const user = token ? verifyAccessToken(token) : null;
+    const user = await getCurrentUser();
 
     if (!user || user.role !== "USER") {
       return ApiResponse.error(
