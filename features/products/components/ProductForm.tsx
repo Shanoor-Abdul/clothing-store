@@ -13,7 +13,7 @@ import { generateSku, generateSlug } from "@/utils";
 import { Option } from "../types/product";
 
 interface ProductFormProps {
-  onSubmit: (data: ProductFormData) => void;
+  onSubmit: (data: ProductFormData) => Promise<void> | void;
   defaultValues?: Partial<ProductFormData>;
   loading?: boolean;
   categories?: Option[];
@@ -75,6 +75,7 @@ const ProductForm = ({
   colors = [],
   sizes = [],
   collections = [],
+  editingProduct,
   onCancel,
 }: ProductFormProps) => {
   const {
@@ -118,8 +119,8 @@ const ProductForm = ({
   });
 
   // State for Combined Variant Builder
-  const [builderColorId, setBuilderColorId] = useState<string>("");
-  const [builderSizeId, setBuilderSizeId] = useState<string>("");
+  const [builderColorIds, setBuilderColorIds] = useState<string[]>([]);
+  const [builderSizeIds, setBuilderSizeIds] = useState<string[]>([]);
   const [builderPrice, setBuilderPrice] = useState<string>("");
   const [builderStock, setBuilderStock] = useState<string>("10");
 
@@ -294,35 +295,54 @@ const ProductForm = ({
     const cat = watch("categoryId");
     const currentVariants = watch("variants") || [];
 
-    const colorObj = colors.find((c) => c.id === builderColorId);
-    const sizeObj = sizes.find((s) => s.id === builderSizeId);
+    const colorsToUse = builderColorIds.length > 0 ? builderColorIds : [""];
+    const sizesToUse = builderSizeIds.length > 0 ? builderSizeIds : [""];
 
-    const suffix = [colorObj?.name, sizeObj?.name].filter(Boolean).join("-") || `VAR-${currentVariants.length + 1}`;
+    const newVariants: any[] = [];
 
-    const generatedSku = `${generateSku(
-      categories.find((c) => c.id === cat)?.name || "PROD",
-      name || "ITEM"
-    )}-${suffix.toUpperCase().replace(/\s+/g, "")}`;
+    colorsToUse.forEach(cId => {
+      sizesToUse.forEach(sId => {
+        const colorObj = colors.find((c) => c.id === cId);
+        const sizeObj = sizes.find((s) => s.id === sId);
 
-    append({
-      sku: generatedSku,
-      stock: Number(builderStock) || 0,
-      isActive: true,
-      barcode: null,
-      price: builderPrice ? Number(builderPrice) : null,
-      colorId: builderColorId || null,
-      sizeId: builderSizeId || null,
+        const suffix = [colorObj?.name, sizeObj?.name].filter(Boolean).join("-") || `VAR-${currentVariants.length + newVariants.length + 1}`;
+
+        const generatedSku = `${generateSku(
+          categories.find((c) => c.id === cat)?.name || "PROD",
+          name || "ITEM"
+        )}-${suffix.toUpperCase().replace(/\s+/g, "")}`;
+
+        newVariants.push({
+          sku: generatedSku,
+          stock: Number(builderStock) || 0,
+          isActive: true,
+          barcode: null,
+          price: builderPrice ? Number(builderPrice) : null,
+          colorId: cId || null,
+          sizeId: sId || null,
+        });
+      });
     });
 
+    append(newVariants);
+
     // Reset builder inputs
-    setBuilderColorId("");
-    setBuilderSizeId("");
+    setBuilderColorIds([]);
+    setBuilderSizeIds([]);
     setBuilderPrice("");
     setBuilderStock("10");
-  }, [watch, categories, colors, sizes, append, builderColorId, builderSizeId, builderPrice, builderStock]);
+  }, [watch, categories, colors, sizes, append, builderColorIds, builderSizeIds, builderPrice, builderStock]);
 
-  const handleFormSubmit = (data: ProductFormData) => {
-    onSubmit(data);
+  const handleFormSubmit = async (data: ProductFormData) => {
+    await onSubmit(data);
+    if (!editingProduct) {
+      reset(defaultValues);
+      setBuilderColorIds([]);
+      setBuilderSizeIds([]);
+      setBuilderPrice("");
+      setBuilderStock("10");
+      setVideoUrlInput("");
+    }
   };
 
   return (
@@ -688,31 +708,39 @@ const ProductForm = ({
           
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Color</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Color (Select Multiple)</label>
               <select
-                value={builderColorId}
-                onChange={(e) => setBuilderColorId(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-xs outline-none focus:border-blue-500"
+                multiple
+                value={builderColorIds}
+                onChange={(e) => {
+                  const options = Array.from(e.target.selectedOptions, option => option.value);
+                  setBuilderColorIds(options);
+                }}
+                className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-xs outline-none focus:border-blue-500 h-28"
               >
-                <option value="">Any / No Color</option>
                 {colors.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+              <p className="text-[10px] text-slate-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Size</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Size (Select Multiple)</label>
               <select
-                value={builderSizeId}
-                onChange={(e) => setBuilderSizeId(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-xs outline-none focus:border-blue-500"
+                multiple
+                value={builderSizeIds}
+                onChange={(e) => {
+                  const options = Array.from(e.target.selectedOptions, option => option.value);
+                  setBuilderSizeIds(options);
+                }}
+                className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-xs outline-none focus:border-blue-500 h-28"
               >
-                <option value="">Any / No Size</option>
                 {sizes.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
+              <p className="text-[10px] text-slate-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
             </div>
 
             <div>
@@ -763,28 +791,16 @@ const ProductForm = ({
 
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 uppercase block">Color</span>
-                      <select
-                        {...register(`variants.${index}.colorId`)}
-                        className="rounded border border-slate-300 px-2 py-1 bg-white"
-                      >
-                        <option value="">None</option>
-                        {colors.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
+                      <span className="font-bold text-slate-900 text-sm block mt-1">
+                        {colors.find(c => c.id === watch(`variants.${index}.colorId`))?.name || "None"}
+                      </span>
                     </div>
 
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 uppercase block">Size</span>
-                      <select
-                        {...register(`variants.${index}.sizeId`)}
-                        className="rounded border border-slate-300 px-2 py-1 bg-white"
-                      >
-                        <option value="">None</option>
-                        {sizes.map((s) => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
+                      <span className="font-bold text-slate-900 text-sm block mt-1">
+                        {sizes.find(s => s.id === watch(`variants.${index}.sizeId`))?.name || "None"}
+                      </span>
                     </div>
 
                     <div>
