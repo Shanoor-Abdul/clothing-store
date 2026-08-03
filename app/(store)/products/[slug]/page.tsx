@@ -85,8 +85,33 @@ const ProductDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-16 text-center text-slate-500">
-        Loading product details...
+      <div className="mx-auto max-w-6xl px-4 py-6 space-y-8 animate-pulse">
+        {/* Breadcrumb Skeleton */}
+        <div className="h-4 w-1/3 rounded bg-slate-200"></div>
+
+        <div className="grid gap-8 md:grid-cols-12">
+          {/* Left Column Skeleton */}
+          <div className="md:col-span-6 space-y-4">
+            <div className="h-[420px] w-full rounded-2xl bg-slate-200"></div>
+            <div className="flex gap-2.5 overflow-hidden">
+              <div className="h-16 w-16 shrink-0 rounded-xl bg-slate-200"></div>
+              <div className="h-16 w-16 shrink-0 rounded-xl bg-slate-200"></div>
+              <div className="h-16 w-16 shrink-0 rounded-xl bg-slate-200"></div>
+            </div>
+            <div className="h-32 w-full rounded-2xl bg-slate-200 mt-4"></div>
+          </div>
+
+          {/* Right Column Skeleton */}
+          <div className="md:col-span-6 space-y-5">
+            <div className="rounded-2xl border bg-white p-6 space-y-4 shadow-sm">
+              <div className="h-4 w-24 rounded bg-slate-200"></div>
+              <div className="h-8 w-3/4 rounded bg-slate-200"></div>
+              <div className="h-6 w-1/2 rounded bg-slate-200 mt-4"></div>
+              <div className="h-12 w-full rounded-xl bg-slate-200 mt-6"></div>
+              <div className="h-12 w-full rounded-xl bg-slate-200"></div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -170,10 +195,12 @@ const ProductDetailPage = () => {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 space-y-8">
       {/* Top Breadcrumb */}
-      <nav className="text-xs text-slate-500">
-        <span className="hover:underline cursor-pointer" onClick={() => router.push("/")}>Home</span> /{" "}
-        <span className="hover:underline cursor-pointer" onClick={() => router.push("/products")}>Products</span> /{" "}
-        <span className="font-semibold text-slate-900">{product.name}</span>
+      <nav className="flex items-center gap-1.5 text-xs text-slate-500 overflow-hidden whitespace-nowrap">
+        <span className="hover:underline cursor-pointer shrink-0" onClick={() => router.push("/")}>Home</span>
+        <span className="shrink-0">/</span>
+        <span className="hover:underline cursor-pointer shrink-0" onClick={() => router.push("/products")}>Products</span>
+        <span className="shrink-0">/</span>
+        <span className="font-semibold text-slate-900 truncate">{product.name}</span>
       </nav>
 
       {/* Main Product Layout (2-Column Amazon / Nike Style) */}

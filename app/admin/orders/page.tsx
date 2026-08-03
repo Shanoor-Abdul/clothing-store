@@ -346,24 +346,28 @@ export default function AdminOrdersPage() {
 
       {/* Comprehensive Order Details Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl space-y-6 my-8">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b pb-4">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-none sm:rounded-2xl bg-white shadow-2xl space-y-0 sm:my-8 min-h-screen sm:min-h-0">
+            {/* Sticky Close Bar — always visible on mobile */}
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3 sm:px-6 sm:py-4">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">Order Detail View</span>
-                <h3 className="text-xl font-bold text-slate-900">{selectedOrder.orderNumber}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <h3 className="text-base sm:text-xl font-bold text-slate-900">{selectedOrder.orderNumber}</h3>
+                <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
                   Placed on {new Date(selectedOrder.createdAt).toLocaleString()}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200 transition"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-red-100 hover:text-red-600 transition text-lg font-bold"
+                aria-label="Close"
               >
-                ✕ Close
+                ✕
               </button>
             </div>
+
+            {/* Scrollable Modal Body */}
+            <div className="p-4 sm:p-6 space-y-6">
 
             {/* Customer & Address Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -509,6 +513,7 @@ export default function AdminOrdersPage() {
                 <span className="text-sky-400">{formatCurrency(Number(selectedOrder.total))}</span>
               </div>
             </div>
+            </div>{/* end modal body */}
           </div>
         </div>
       )}

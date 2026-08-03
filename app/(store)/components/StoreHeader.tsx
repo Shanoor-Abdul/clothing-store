@@ -225,25 +225,54 @@ const StoreHeader = () => {
 
       {/* ── Sub-navigation Ribbon ── */}
       <div className="bg-slate-950 border-t border-slate-800/80 px-3 sm:px-4 py-2 text-xs">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 sm:gap-4 overflow-x-auto whitespace-nowrap text-slate-300 scrollbar-none">
-          <Link href="/products" className="flex items-center gap-1 font-bold text-white hover:text-sky-400 flex-shrink-0">
-            <Menu size={13} /> All
-          </Link>
-          <span className="text-slate-700">|</span>
-          <Link href="/products?featured=true" className="hover:text-white transition flex-shrink-0">
-            Featured Deals
-          </Link>
-          {categories.slice(0, 5).map((cat) => (
-            <Link
-              key={cat.id}
-              href={`/products?category=${cat.id}`}
-              className="hover:text-white transition flex-shrink-0"
-            >
-              {cat.name}
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+          
+          {/* Mobile Category Dropdown */}
+          <div className="flex-1 sm:hidden">
+             <select 
+               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-300 outline-none focus:border-sky-500"
+               onChange={(e) => {
+                 if (e.target.value) {
+                   router.push(e.target.value);
+                 }
+               }}
+               defaultValue=""
+             >
+               <option value="" disabled>Browse Categories...</option>
+               <option value="/products">All Clothing Catalog</option>
+               <option value="/products?featured=true">Featured Deals</option>
+               {categories.map((cat) => (
+                 <option key={cat.id} value={`/products?category=${cat.id}`}>
+                   {cat.name}
+                 </option>
+               ))}
+             </select>
+          </div>
+
+          {/* Desktop Ribbon */}
+          <div className="hidden sm:flex items-center gap-4 overflow-x-auto whitespace-nowrap text-slate-300 scrollbar-none flex-1">
+            <Link href="/products" className="flex items-center gap-1 font-bold text-white hover:text-sky-400">
+              <Menu size={13} /> All
             </Link>
-          ))}
-          <Link href="/account/orders" className="hover:text-white transition ml-auto font-semibold text-sky-400 flex-shrink-0">
-            Track Orders →
+            <span className="text-slate-700">|</span>
+            <Link href="/products?featured=true" className="hover:text-white transition">
+              Featured Deals
+            </Link>
+            {categories.slice(0, 5).map((cat) => (
+              <Link
+                key={cat.id}
+                href={`/products?category=${cat.id}`}
+                className="hover:text-white transition"
+              >
+                {cat.name}
+              </Link>
+            ))}
+          </div>
+
+          {/* Track Orders (Always Visible) */}
+          <Link href="/account/orders" className="hover:text-sky-300 transition font-bold text-sky-400 flex items-center gap-1.5 whitespace-nowrap shrink-0">
+            <span className="hidden sm:inline">Track Orders</span>
+            <span className="sm:hidden">Orders</span> →
           </Link>
         </div>
       </div>

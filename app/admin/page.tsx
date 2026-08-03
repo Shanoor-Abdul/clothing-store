@@ -189,7 +189,7 @@ const AdminDashboardPage = () => {
               {recentOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-3"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-3"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
@@ -200,7 +200,7 @@ const AdminDashboardPage = () => {
                       {new Date(order.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         statusColors[order.status] || "bg-slate-100 text-slate-700"

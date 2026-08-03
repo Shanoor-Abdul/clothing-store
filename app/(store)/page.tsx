@@ -194,7 +194,7 @@ const HomePage = () => {
             className="h-full w-full object-cover opacity-80 transition-opacity duration-500"
             loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/40 to-transparent p-6 sm:p-12 flex items-center">
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/40 to-transparent px-12 py-6 sm:p-12 flex items-center">
             <div className="max-w-xl space-y-3 sm:space-y-4">
               {activeBanner.subtitle && (
                 <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-[11px] font-bold uppercase tracking-widest text-blue-200 backdrop-blur-sm">
