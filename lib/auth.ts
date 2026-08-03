@@ -16,11 +16,21 @@ const ACCESS_SECRET =
 const REFRESH_SECRET =
   process.env.JWT_REFRESH_SECRET || "dev-refresh-secret-change-me";
 
-export const ACCESS_TOKEN_COOKIE = "cs_access_token";
-export const REFRESH_TOKEN_COOKIE = "cs_refresh_token";
+export const ACCESS_TOKEN_COOKIE_USER = "cs_user_access_token";
+export const REFRESH_TOKEN_COOKIE_USER = "cs_user_refresh_token";
+
+export const ACCESS_TOKEN_COOKIE_ADMIN = "cs_admin_access_token";
+export const REFRESH_TOKEN_COOKIE_ADMIN = "cs_admin_refresh_token";
 
 export const ACCESS_EXPIRES = "7d";
 export const REFRESH_EXPIRES = "30d";
+
+const getCookieName = (type: "access" | "refresh", role: AuthRole) => {
+  if (role === "ADMIN") {
+    return type === "access" ? ACCESS_TOKEN_COOKIE_ADMIN : REFRESH_TOKEN_COOKIE_ADMIN;
+  }
+  return type === "access" ? ACCESS_TOKEN_COOKIE_USER : REFRESH_TOKEN_COOKIE_USER;
+};
 
 export const signAccessToken = (payload: AuthPayload): string => {
   return jwt.sign(payload, ACCESS_SECRET, {
@@ -52,11 +62,12 @@ export const verifyRefreshToken = (token: string): AuthPayload | null => {
 
 export const setAuthCookies = async (
   accessToken: string,
-  refreshToken: string
+  refreshToken: string,
+  role: AuthRole = "USER"
 ) => {
   const cookieStore = await cookies();
 
-  cookieStore.set(ACCESS_TOKEN_COOKIE, accessToken, {
+  cookieStore.set(getCookieName("access", role), accessToken, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -64,7 +75,7 @@ export const setAuthCookies = async (
     maxAge: 60 * 60 * 24 * 7,
   });
 
-  cookieStore.set(REFRESH_TOKEN_COOKIE, refreshToken, {
+  cookieStore.set(getCookieName("refresh", role), refreshToken, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -73,23 +84,31 @@ export const setAuthCookies = async (
   });
 };
 
-export const clearAuthCookies = async () => {
+export const clearAuthCookies = async (role?: AuthRole) => {
   const cookieStore = await cookies();
 
-  cookieStore.delete({ name: ACCESS_TOKEN_COOKIE, path: "/" });
-  cookieStore.delete({ name: REFRESH_TOKEN_COOKIE, path: "/" });
+  if (role) {
+    cookieStore.delete({ name: getCookieName("access", role), path: "/" });
+    cookieStore.delete({ name: getCookieName("refresh", role), path: "/" });
+  } else {
+    // Clear both if no role specified
+    cookieStore.delete({ name: ACCESS_TOKEN_COOKIE_USER, path: "/" });
+    cookieStore.delete({ name: REFRESH_TOKEN_COOKIE_USER, path: "/" });
+    cookieStore.delete({ name: ACCESS_TOKEN_COOKIE_ADMIN, path: "/" });
+    cookieStore.delete({ name: REFRESH_TOKEN_COOKIE_ADMIN, path: "/" });
+  }
 };
 
-export const getAccessTokenFromCookies = async (): Promise<
+export const getAccessTokenFromCookies = async (role: AuthRole = "USER"): Promise<
   string | undefined
 > => {
   const cookieStore = await cookies();
 
-  return cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
+  return cookieStore.get(getCookieName("access", role))?.value;
 };
 
-export const getCurrentUser = async (): Promise<AuthPayload | null> => {
-  const token = await getAccessTokenFromCookies();
+export const getCurrentUser = async (role: AuthRole = "USER"): Promise<AuthPayload | null> => {
+  const token = await getAccessTokenFromCookies(role);
 
   if (!token) return null;
 

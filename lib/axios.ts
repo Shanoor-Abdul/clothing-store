@@ -12,9 +12,12 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     if (typeof window !== "undefined") {
-      const token =
-        localStorage.getItem("cs_access_token") ||
-        localStorage.getItem("token");
+      const isAdminRoute = config.url?.includes("/admin");
+      const token = isAdminRoute
+        ? localStorage.getItem("cs_admin_access_token")
+        : localStorage.getItem("cs_user_access_token") ||
+          localStorage.getItem("token");
+
       if (token) {
         config.headers = config.headers || {};
         config.headers.Authorization = "Bearer " + token;

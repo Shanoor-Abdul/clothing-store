@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
 
-    await setAuthCookies(accessToken, refreshToken);
+    await setAuthCookies(accessToken, refreshToken, "ADMIN");
 
     return ApiResponse.success(
       { user: payload, accessToken },
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser("ADMIN");
 
   if (!user || user.role !== "ADMIN") {
     return ApiResponse.error("Unauthorized", 401);
@@ -97,7 +97,7 @@ export async function GET() {
 }
 
 export async function DELETE() {
-  await clearAuthCookies();
+  await clearAuthCookies("ADMIN");
 
   return ApiResponse.success(null, "Logged out");
 }

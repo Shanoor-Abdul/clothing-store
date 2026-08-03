@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
-  ACCESS_TOKEN_COOKIE,
+  ACCESS_TOKEN_COOKIE_USER,
+  ACCESS_TOKEN_COOKIE_ADMIN,
   verifyAccessToken,
 } from "@/lib/auth";
 
-const getRequestToken = (request: NextRequest) => {
-  const cookieToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
+const getRequestToken = (request: NextRequest, isAdminRoute: boolean) => {
+  const cookieName = isAdminRoute ? ACCESS_TOKEN_COOKIE_ADMIN : ACCESS_TOKEN_COOKIE_USER;
+  const cookieToken = request.cookies.get(cookieName)?.value;
   const authHeader = request.headers.get("authorization") ?? "";
   const headerToken = authHeader.startsWith("Bearer ")
     ? authHeader.substring(7)
@@ -23,7 +25,7 @@ export function proxy(request: NextRequest) {
   const isAdminApiRoute = pathname.startsWith("/api/admin");
   const isProtectedUserRoute = pathname.startsWith("/account") || pathname.startsWith("/checkout");
 
-  const token = getRequestToken(request);
+  const token = getRequestToken(request, isAdminRoute || isAdminApiRoute || isAdminLogin);
   const user = token ? verifyAccessToken(token) : null;
 
   // Protect Admin API routes

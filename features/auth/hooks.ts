@@ -31,8 +31,7 @@ export const useAdminLogin = () => {
       adminLogin(data),
     onSuccess: (res) => {
       if (res.accessToken) {
-        localStorage.setItem("token", res.accessToken);
-        localStorage.setItem("cs_access_token", res.accessToken);
+        localStorage.setItem("cs_admin_access_token", res.accessToken);
       }
       dispatch(setAuth({ user: res.user }));
     },
@@ -47,8 +46,8 @@ export const useUserLogin = () => {
       userLogin(data),
     onSuccess: (res) => {
       if (res.accessToken) {
-        localStorage.setItem("token", res.accessToken);
-        localStorage.setItem("cs_access_token", res.accessToken);
+        localStorage.setItem("token", res.accessToken); // Keep for legacy
+        localStorage.setItem("cs_user_access_token", res.accessToken);
       }
       dispatch(setAuth({ user: res.user }));
     },
@@ -64,7 +63,7 @@ export const useUserRegister = () => {
     onSuccess: (res) => {
       if (res.accessToken) {
         localStorage.setItem("token", res.accessToken);
-        localStorage.setItem("cs_access_token", res.accessToken);
+        localStorage.setItem("cs_user_access_token", res.accessToken);
       }
       dispatch(setAuth({ user: res.user }));
     },
@@ -79,7 +78,8 @@ export const useLogout = () => {
     mutationFn: () => logout(),
     onSuccess: () => {
       localStorage.removeItem("token");
-      localStorage.removeItem("cs_access_token");
+      localStorage.removeItem("cs_user_access_token");
+      localStorage.removeItem("cs_admin_access_token");
       dispatch(clearAuth());
       queryClient.clear();
     },

@@ -2,8 +2,10 @@ import { NextRequest } from "next/server";
 
 import { ApiResponse } from "@/lib/api-response";
 import {
-  ACCESS_TOKEN_COOKIE,
-  REFRESH_TOKEN_COOKIE,
+  ACCESS_TOKEN_COOKIE_USER,
+  REFRESH_TOKEN_COOKIE_USER,
+  ACCESS_TOKEN_COOKIE_ADMIN,
+  REFRESH_TOKEN_COOKIE_ADMIN,
   getCurrentUser,
   setAuthCookies,
   signAccessToken,
@@ -21,9 +23,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const refreshToken = request.cookies.get(
-    REFRESH_TOKEN_COOKIE
-  )?.value;
+  const isAdmin = request.nextUrl.searchParams.get("role") === "ADMIN";
+  const cookieName = isAdmin ? REFRESH_TOKEN_COOKIE_ADMIN : REFRESH_TOKEN_COOKIE_USER;
+
+  const refreshToken = request.cookies.get(cookieName)?.value;
 
   if (!refreshToken) {
     return ApiResponse.error("No refresh token", 401);
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   const accessToken = signAccessToken(payload);
 
-  await setAuthCookies(accessToken, refreshToken);
+  await setAuthCookies(accessToken, refreshToken, isAdmin ? "ADMIN" : "USER");
 
   return ApiResponse.success(
     { user: payload, accessToken },
