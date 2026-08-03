@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { useLogout } from "@/features/auth/hooks";
 import { clearAuth } from "@/features/auth/slice";
 import useDebounce from "@/hooks/useDebounce";
+import NotificationBadge from "@/components/NotificationBadge";
 
 interface Category {
   id: string;
@@ -170,6 +171,9 @@ const StoreHeader = () => {
               >
                 <Heart size={19} />
               </Link>
+
+              {/* Live notification badge for store users */}
+              <NotificationBadge variant="store" />
 
               <Link
                 href="/account"

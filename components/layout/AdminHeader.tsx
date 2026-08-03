@@ -1,12 +1,13 @@
 "use client";
 
-import { Menu, Bell, LogOut, Search, UserCircle } from "lucide-react";
+import { Menu, LogOut, Search, UserCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { useLogout } from "@/features/auth/hooks";
 import { useAppDispatch } from "@/store";
 import { clearAuth } from "@/features/auth/slice";
+import NotificationBadge from "@/components/NotificationBadge";
 
 interface AdminHeaderProps {
   onMenuClick: () => void;
@@ -57,12 +58,7 @@ const AdminHeader = ({ onMenuClick }: AdminHeaderProps) => {
 
       {/* Right: Bell + User + Logout */}
       <div className="flex items-center gap-2 md:gap-4">
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-lg hover:bg-slate-100 transition" aria-label="Notifications">
-          <Bell size={20} />
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-            3
-          </span>
-        </button>
+        <NotificationBadge variant="admin" />
 
         <div className="hidden sm:flex items-center gap-2">
           <UserCircle size={28} />

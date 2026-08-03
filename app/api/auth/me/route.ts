@@ -12,8 +12,9 @@ import {
   verifyRefreshToken,
 } from "@/lib/auth";
 
-export async function GET() {
-  const user = await getCurrentUser();
+export async function GET(request: NextRequest) {
+  const isAdmin = request.nextUrl.searchParams.get("role") === "ADMIN";
+  const user = await getCurrentUser(isAdmin ? "ADMIN" : "USER");
 
   if (!user) {
     return ApiResponse.error("Unauthorized", 401);
