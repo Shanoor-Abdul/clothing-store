@@ -8,126 +8,157 @@ import { addNotification } from "./notificationsSlice";
 import { getSupabaseClient } from "./supabaseClient";
 import { AppNotification } from "./types";
 
-/**
- * useRealtime – subscribes to Supabase Realtime channel events.
- *   Admins listen on "orders" channel for INSERT (new orders).
- *   Users listen on "orders" channel for UPDATE where user_id matches theirs.
- *
- * Call this hook once at the app level (inside ReduxProvider).
- */
+// Prisma generates table name exactly as the model name.
+// In Supabase, without @@map, it's the model name: "Order"
+// If your Supabase tables are lowercase, change to "orders"
+const ORDER_TABLE = "Order";
+
 export const useRealtime = () => {
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const role = useAppSelector((s) => s.auth.role);
   const user = useAppSelector((s) => s.auth.user);
-  const channelRef = useRef<ReturnType<ReturnType<typeof getSupabaseClient>["channel"]> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
     const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.warn("[Realtime] Supabase not configured — skipping live notifications.");
+      return;
+    }
 
-    // Unsubscribe from old channel if any
+    // Cleanup previous subscription
     if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
+      try { supabase.removeChannel(channelRef.current); } catch { /* ignore */ }
       channelRef.current = null;
     }
 
     const channelName = role === "ADMIN" ? "admin-orders" : `user-orders-${user.id}`;
     const channel = supabase.channel(channelName);
 
+    const statusLabels: Record<string, string> = {
+      PENDING: "Pending",
+      CONFIRMED: "Confirmed",
+      PROCESSING: "Processing",
+      SHIPPED: "Shipped",
+      DELIVERED: "Delivered",
+      CANCELLED: "Cancelled",
+      PAYMENT_PENDING: "Payment Pending",
+    };
+
     if (role === "ADMIN") {
-      // Admin listens for new orders (INSERT)
+      // Admin: new order placed
       channel.on(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         "postgres_changes" as any,
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "Order",
-        },
+        { event: "INSERT", schema: "public", table: ORDER_TABLE },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (payload: any) => {
-          const order = payload.new;
-          const notification: AppNotification = {
-            id: `order-created-${order.id}-${Date.now()}`,
-            type: "order_created",
-            message: `🛍️ New order #${order.orderNumber || order.id.slice(0, 8)} placed!`,
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            timestamp: new Date().toISOString(),
-          };
+          try {
+            const order = payload.new;
+            const notification: AppNotification = {
+              id: `order-created-${order.id}-${Date.now()}`,
+              type: "order_created",
+              message: `🛍️ New order #${order.orderNumber || order.id?.slice(0, 8)} placed!`,
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              timestamp: new Date().toISOString(),
+            };
+            dispatch(addNotification(notification));
+            toast(notification.message, {
+              style: { background: "#1e293b", border: "1px solid #ff8c00", color: "#fff" },
+              duration: 7000,
+            });
+          } catch { /* ignore */ }
+        }
+      );
 
-          dispatch(addNotification(notification));
+      // Admin: any order status changed
+      channel.on(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        "postgres_changes" as any,
+        { event: "UPDATE", schema: "public", table: ORDER_TABLE },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (payload: any) => {
+          try {
+            const order = payload.new;
+            const prevStatus = payload.old?.status;
+            const newStatus = order.status;
+            if (prevStatus === newStatus) return;
 
-          // Orange toast for admin
-          toast(notification.message, {
-            style: {
-              background: "#1e293b",
-              border: "1px solid #ff8c00",
-              color: "#fff",
-            },
-            duration: 6000,
-          });
+            const label = statusLabels[newStatus] || newStatus;
+            const notification: AppNotification = {
+              id: `admin-status-${order.id}-${Date.now()}`,
+              type: "order_status_changed",
+              message: `🔄 Order #${order.orderNumber || order.id?.slice(0, 8)} updated to "${label}"`,
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              timestamp: new Date().toISOString(),
+            };
+            dispatch(addNotification(notification));
+            toast(notification.message, {
+              style: { background: "#1e293b", border: "1px solid #ff8c00", color: "#fff" },
+              duration: 7000,
+            });
+          } catch { /* ignore */ }
         }
       );
     } else {
-      // User listens for order status changes (UPDATE) on their own orders
+      // User: their order status changed (any change, not just payment pending)
       channel.on(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         "postgres_changes" as any,
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "Order",
-          filter: `userId=eq.${user.id}`,
-        },
+        { event: "UPDATE", schema: "public", table: ORDER_TABLE },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (payload: any) => {
-          const order = payload.new;
-          const prevStatus = payload.old?.status;
-          const newStatus = order.status;
+          try {
+            const order = payload.new;
+            // Only notify for this user's orders
+            if (order.userId !== user.id) return;
 
-          // Only notify if status actually changed
-          if (prevStatus === newStatus) return;
+            const prevStatus = payload.old?.status;
+            const newStatus = order.status;
+            if (prevStatus === newStatus) return;
 
-          const statusLabels: Record<string, string> = {
-            PENDING: "Pending",
-            CONFIRMED: "Confirmed",
-            PROCESSING: "Processing",
-            SHIPPED: "Shipped",
-            DELIVERED: "Delivered",
-            CANCELLED: "Cancelled",
-            PAYMENT_PENDING: "Payment Pending",
-          };
-
-          const label = statusLabels[newStatus] || newStatus;
-          const notification: AppNotification = {
-            id: `order-status-${order.id}-${Date.now()}`,
-            type: "order_status_changed",
-            message: `📦 Order #${order.orderNumber || order.id.slice(0, 8)} is now "${label}"`,
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            timestamp: new Date().toISOString(),
-          };
-
-          dispatch(addNotification(notification));
-
-          // Orange toast for user
-          toast(notification.message, {
-            style: {
-              background: "#1e293b",
-              border: "1px solid #ff8c00",
-              color: "#fff",
-            },
-            duration: 6000,
-          });
+            const label = statusLabels[newStatus] || newStatus;
+            const notification: AppNotification = {
+              id: `order-status-${order.id}-${Date.now()}`,
+              type: "order_status_changed",
+              message: `📦 Your order #${order.orderNumber || order.id?.slice(0, 8)} is now "${label}"`,
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              timestamp: new Date().toISOString(),
+            };
+            dispatch(addNotification(notification));
+            toast(notification.message, {
+              style: { background: "#1e293b", border: "1px solid #ff8c00", color: "#fff" },
+              duration: 7000,
+            });
+          } catch { /* ignore */ }
         }
       );
     }
 
-    channel.subscribe();
-    channelRef.current = channel;
+    try {
+      channel.subscribe((status: string) => {
+        if (status === "SUBSCRIBED") {
+          console.log(`[Realtime] Subscribed to channel: ${channelName}`);
+        }
+        if (status === "CHANNEL_ERROR") {
+          console.error(`[Realtime] Channel error on: ${channelName}`);
+        }
+      });
+      channelRef.current = channel;
+    } catch (err) {
+      console.error("[Realtime] Subscribe failed:", err);
+    }
 
     return () => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        try { supabase.removeChannel(channelRef.current); } catch { /* ignore */ }
         channelRef.current = null;
       }
     };

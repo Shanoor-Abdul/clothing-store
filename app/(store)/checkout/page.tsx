@@ -44,13 +44,13 @@ const CheckoutPage = () => {
         </p>
         <div className="mt-6 flex gap-3">
           <Link
-            href="/login"
+            href="/login?redirect=/checkout"
             className="rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700"
           >
             Sign In
           </Link>
           <Link
-            href="/register"
+            href="/register?redirect=/checkout"
             className="rounded-lg border px-6 py-3 font-medium hover:bg-slate-50"
           >
             Create Account
@@ -73,7 +73,7 @@ const CheckoutPage = () => {
       </div>
     );
   }
-debugger
+
   const handlePlaceOrder = async () => {
     try {
       setPlacing(true);
