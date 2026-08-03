@@ -23,7 +23,7 @@ const RegisterPage = () => {
   );
 
   useEffect(() => {
-    if (isAuthenticated) router.replace("/account");
+    if (isAuthenticated) router.replace("/products");
   }, [isAuthenticated, router]);
 
   const {
@@ -44,7 +44,7 @@ const RegisterPage = () => {
     try {
       await registerMutation.mutateAsync(data);
       toast.success("Account created");
-      router.replace("/account");
+      router.replace("/products");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Registration failed"

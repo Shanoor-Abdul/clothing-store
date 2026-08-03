@@ -23,7 +23,7 @@ export function proxy(request: NextRequest) {
   const isAdminRoute = pathname.startsWith("/admin");
   const isAdminLogin = pathname === "/admin/login";
   const isAdminApiRoute = pathname.startsWith("/api/admin");
-  const isProtectedUserRoute = pathname.startsWith("/account") || pathname.startsWith("/checkout");
+  const isProtectedUserRoute = pathname.startsWith("/products") || pathname.startsWith("/checkout");
 
   const token = getRequestToken(request, isAdminRoute || isAdminApiRoute || isAdminLogin);
   const user = token ? verifyAccessToken(token) : null;
@@ -73,5 +73,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*", "/account/:path*", "/checkout"],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/products/:path*", "/checkout"],
 };
